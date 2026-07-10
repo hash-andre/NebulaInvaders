@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Nebula Invaders, un piccolo arcade spaziale">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <title>Nebula Invaders</title>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Passa al tema chiaro" aria-pressed="false">
+    <span class="theme-indicator" aria-hidden="true"></span><span class="theme-label">Light mode</span>
+  </button>
+
+  <main class="page-shell">
+    <header class="hero">
+      <p class="eyebrow">Incoming transmission · sector 09</p>
+      <h1>NEBULA <span>INVADERS</span></h1>
+      <p class="intro">Difendi l'orbita. Abbatti la flotta. Cattura l'UFO.</p>
+    </header>
+
+    <section class="game-card" aria-label="Nebula Invaders">
+      <div class="hud" aria-live="polite">
+        <div><span class="hud-label">Score</span><strong id="score">00000</strong></div>
+        <div class="hud-center"><span class="status-dot"></span><span id="status">Mission active</span></div>
+        <div class="lives-wrap"><span class="hud-label">Lives</span><strong id="lives">♥ ♥ ♥</strong></div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="game" width="720" height="480" tabindex="0" aria-label="Area di gioco"></canvas>
+        <div class="start-panel" id="start-panel">
+          <p class="panel-kicker" id="panel-kicker">Sector 09</p>
+          <h2 id="panel-title">Ready, pilot?</h2>
+          <p id="panel-copy">Gli invasori si stanno avvicinando.</p>
+          <button class="primary-button" id="action-button" type="button">Start mission</button>
+        </div>
+      </div>
+
+      <div class="controls-bar">
+        <p><kbd>←</kbd><kbd>→</kbd><span>Move</span></p>
+        <p><kbd>Space</kbd><span>Fire</span></p>
+        <button class="sound-button" id="sound-toggle" type="button" aria-label="Disattiva suoni" aria-pressed="true">♪ <span>Sound on</span></button>
+      </div>
+    </section>
+
+    <p class="tip"><span>Pro tip</span> L'UFO vale 500 punti e ogni vita rimasta vale 1.000 punti.</p>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
