@@ -94,6 +94,10 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 - Adattati HUD, pannello iniziale, tipografia e spaziature per telefoni in verticale e in orizzontale, incluse le safe area dei dispositivi con notch.
 - Conservati i comandi da tastiera e il layout desktop esistenti.
 
+### Cache degli asset su GitHub Pages
+
+- Aggiunta una versione agli URL di `style.css` e `script.js` in `index.html` per impedire che il deploy combini il nuovo markup con asset precedenti conservati nella cache del browser o della CDN.
+
 ## Verifiche
 
 - Sintassi di `script.js` controllata con `node --check`.
