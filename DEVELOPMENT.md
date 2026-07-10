@@ -98,6 +98,13 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 - Aggiunta una versione agli URL di `style.css` e `script.js` in `index.html` per impedire che il deploy combini il nuovo markup con asset precedenti conservati nella cache del browser o della CDN.
 
+### Barra comandi desktop e rotazione mobile
+
+- Impedita la compressione verticale della card nel layout flex e aggiornato il calcolo della larghezza desktop per riservare spazio a HUD, barra comandi, intestazione e suggerimento.
+- Gestita la rotazione mobile usando l'altezza effettiva di `VisualViewport`, con un secondo aggiornamento ritardato per i browser che assestano le dimensioni dopo `orientationchange`.
+- Azzerati movimento e stato visivo dei controlli touch durante rotazione, ridimensionamento e perdita del focus, evitando input bloccati.
+- Estesi i controlli mobile ai dispositivi touch fino a 1.024 px e aggiornata la versione degli asset per GitHub Pages.
+
 ## Verifiche
 
 - Sintassi di `script.js` controllata con `node --check`.

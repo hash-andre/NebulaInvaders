@@ -73,7 +73,28 @@ class Game {
       button.addEventListener("pointerdown", press);
       ["pointerup", "pointercancel", "lostpointercapture"].forEach(type => button.addEventListener(type, release));
     });
-    addEventListener("blur", () => { this.keys.ArrowLeft = false; this.keys.ArrowRight = false; });
+    const resetInputs = () => {
+      this.keys.ArrowLeft = false;
+      this.keys.ArrowRight = false;
+      document.querySelectorAll(".touch-button.is-active").forEach(button => button.classList.remove("is-active"));
+    };
+    const syncViewport = () => {
+      const height = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty("--app-height", `${Math.round(height)}px`);
+      document.documentElement.dataset.orientation = innerWidth > innerHeight ? "landscape" : "portrait";
+      resetInputs();
+    };
+    let viewportTimer;
+    const scheduleViewportSync = () => {
+      syncViewport();
+      clearTimeout(viewportTimer);
+      viewportTimer = setTimeout(syncViewport, 180);
+    };
+    addEventListener("blur", resetInputs);
+    addEventListener("resize", scheduleViewportSync, { passive: true });
+    addEventListener("orientationchange", scheduleViewportSync, { passive: true });
+    window.visualViewport?.addEventListener("resize", scheduleViewportSync, { passive: true });
+    syncViewport();
     this.ui.action.addEventListener("click", () => this.start());
   }
   start() { this.audio.init(); if (this.ended) this.reset(); this.running = true; this.ui.panel.classList.add("hidden"); this.ui.status.textContent = "Mission active"; this.canvas.focus(); }
