@@ -56,6 +56,24 @@ class Game {
   setupControls() {
     addEventListener("keydown", e => { if (["ArrowLeft", "ArrowRight", "Space"].includes(e.code)) e.preventDefault(); this.keys[e.code] = true; if (e.code === "Space" && !e.repeat) this.shoot(); });
     addEventListener("keyup", e => { this.keys[e.code] = false; });
+    document.querySelectorAll("[data-control]").forEach(button => {
+      const control = button.dataset.control;
+      const press = e => {
+        e.preventDefault();
+        button.setPointerCapture?.(e.pointerId);
+        button.classList.add("is-active");
+        if (control === "fire") this.shoot();
+        else this.keys[control === "left" ? "ArrowLeft" : "ArrowRight"] = true;
+      };
+      const release = e => {
+        e.preventDefault();
+        button.classList.remove("is-active");
+        if (control !== "fire") this.keys[control === "left" ? "ArrowLeft" : "ArrowRight"] = false;
+      };
+      button.addEventListener("pointerdown", press);
+      ["pointerup", "pointercancel", "lostpointercapture"].forEach(type => button.addEventListener(type, release));
+    });
+    addEventListener("blur", () => { this.keys.ArrowLeft = false; this.keys.ArrowRight = false; });
     this.ui.action.addEventListener("click", () => this.start());
   }
   start() { this.audio.init(); if (this.ended) this.reset(); this.running = true; this.ui.panel.classList.add("hidden"); this.ui.status.textContent = "Mission active"; this.canvas.focus(); }

@@ -8,6 +8,7 @@ Apri `index.html` in un browser moderno e premi **Start mission**.
 
 - `←` e `→`: muovi la navicella.
 - `Spazio`: spara.
+- Su smartphone e tablet usa i pulsanti touch: frecce per muoverti e **Fire** per sparare.
 - Abbatti tutti gli alieni prima che raggiungano la navicella.
 - Evita i proiettili nemici: hai tre vite.
 - Colpisci l'UFO dorato per ottenere 500 punti bonus.

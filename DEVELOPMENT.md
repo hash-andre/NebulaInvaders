@@ -86,6 +86,14 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 - Disabilitato lo scroll verticale nella versione desktop; sui piccoli schermi resta disponibile come fallback per non tagliare i controlli.
 - Rimosse le emoji dal toggle del tema, sostituite con un indicatore CSS neutro e un'etichetta testuale.
 
+### Responsive mobile e controlli touch
+
+- Mantenuta la risoluzione logica del Canvas a 720×480 e scalata solo la sua presentazione CSS, preservando coordinate, collisioni e bilanciamento.
+- Aggiunti controlli touch accessibili con Pointer Events: movimento continuo a sinistra/destra e pulsante di fuoco, utilizzabili contemporaneamente.
+- Introdotti target touch ampi, `touch-action`, feedback di pressione, gestione dell'interruzione del puntatore e reset degli input alla perdita del focus.
+- Adattati HUD, pannello iniziale, tipografia e spaziature per telefoni in verticale e in orizzontale, incluse le safe area dei dispositivi con notch.
+- Conservati i comandi da tastiera e il layout desktop esistenti.
+
 ## Verifiche
 
 - Sintassi di `script.js` controllata con `node --check`.

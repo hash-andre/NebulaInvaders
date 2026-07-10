@@ -40,9 +40,19 @@
       </div>
 
       <div class="controls-bar">
-        <p><kbd>←</kbd><kbd>→</kbd><span>Move</span></p>
-        <p><kbd>Space</kbd><span>Fire</span></p>
+        <div class="keyboard-help" aria-label="Comandi da tastiera">
+          <p><kbd>←</kbd><kbd>→</kbd><span>Move</span></p>
+          <p><kbd>Space</kbd><span>Fire</span></p>
+        </div>
         <button class="sound-button" id="sound-toggle" type="button" aria-label="Disattiva suoni" aria-pressed="true">♪ <span>Sound on</span></button>
+      </div>
+
+      <div class="touch-controls" aria-label="Comandi di gioco touch">
+        <div class="move-controls" role="group" aria-label="Movimento">
+          <button class="touch-button" type="button" data-control="left" aria-label="Muovi a sinistra"><span aria-hidden="true">←</span></button>
+          <button class="touch-button" type="button" data-control="right" aria-label="Muovi a destra"><span aria-hidden="true">→</span></button>
+        </div>
+        <button class="touch-button fire-button" type="button" data-control="fire" aria-label="Spara"><span aria-hidden="true">●</span><small>Fire</small></button>
       </div>
     </section>
 
