@@ -24,7 +24,7 @@ Score and remaining lives carry over between levels. Completing the campaign awa
 | 2 | Meteor Foundry | Twin Core | Dual-reactor silhouette, twin projectiles, and layered audio |
 | 3 | Nebula Throne | Void Sovereign | Winged final boss with heavy, dissonant sound design |
 
-Every level uses its own generated space background. The backgrounds keep the center of the playfield dark enough for bullets, enemies, and the player ship to remain readable.
+Every level uses its own generated, preloaded WebP space background. The backgrounds keep the center of the playfield dark enough for bullets, enemies, and the player ship to remain readable.
 
 ## Features
 
@@ -67,9 +67,9 @@ The tests use Node's built-in test runner, so `npm install` is not required.
 ```text
 .
 ├── assets/
-│   ├── level-1-background.png
-│   ├── level-2-background.png
-│   ├── level-3-background.png
+│   ├── level-1-background.webp
+│   ├── level-2-background.webp
+│   ├── level-3-background.webp
 │   └── space-background.png
 ├── test/
 │   └── game.test.js

@@ -160,15 +160,19 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
 }
 
 @media (max-width: 640px) and (orientation: landscape), (pointer: coarse) and (max-width: 1024px) and (orientation: landscape) {
-  body { overflow: auto; }
-  .theme-toggle, .hero, .tip { display: none; }
-  .page-shell { width: min(100% - 12px, 760px, calc((var(--app-height) - 105px) * 1.5)); min-height: 0; padding: 6px 0 max(6px, env(safe-area-inset-bottom)); }
+  body { overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: auto; }
+  .theme-toggle { display: flex; position: absolute; }
+  .page-shell { width: min(100% - 16px, 840px); min-height: 0; padding: max(58px, calc(env(safe-area-inset-top) + 52px)) 0 max(10px, env(safe-area-inset-bottom)); }
+  .hero { display: flex; align-items: baseline; justify-content: center; gap: 18px; margin-bottom: 9px; }
+  .hero h1 { font-size: clamp(28px, 6vw, 38px); white-space: nowrap; }
+  .intro { margin: 0; font-size: 9px; }
   .game-card { position: relative; }
-  .hud { height: 38px; }
-  .controls-bar { position: absolute; z-index: 2; top: 7px; right: 8px; min-height: 0; padding: 0; border: 0; background: transparent; }
+  .hud { height: 42px; }
+  .controls-bar { position: static; min-height: 42px; padding: 4px 10px; border-top: 1px solid var(--line); }
   .sound-button { min-height: 34px; }
   .touch-controls { padding-top: 7px; padding-bottom: max(7px, env(safe-area-inset-bottom)); }
   .touch-button { height: 50px; }
+  .tip { display: block; margin-top: 8px; }
 }
 
 @media (max-height: 650px) and (min-width: 641px) and (pointer: fine) {

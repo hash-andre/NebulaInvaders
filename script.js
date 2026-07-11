@@ -1,7 +1,7 @@
 const LEVELS = [
   {
     name: "Outer Patrol",
-    background: "assets/level-1-background.png",
+    background: "assets/level-1-background.webp",
     rows: 3,
     columns: 8,
     fleetSpeed: 24,
@@ -19,7 +19,7 @@ const LEVELS = [
   },
   {
     name: "Meteor Foundry",
-    background: "assets/level-2-background.png",
+    background: "assets/level-2-background.webp",
     rows: 4,
     columns: 9,
     fleetSpeed: 31,
@@ -37,7 +37,7 @@ const LEVELS = [
   },
   {
     name: "Nebula Throne",
-    background: "assets/level-3-background.png",
+    background: "assets/level-3-background.webp",
     rows: 4,
     columns: 10,
     fleetSpeed: 38,
@@ -157,11 +157,12 @@ class AudioEngine {
 }
 
 class Bullet {
-  constructor(x, y, speed, enemy = false) {
+  constructor(x, y, speed, enemy = false, horizontalSpeed = 0) {
     Object.assign(this, {
       x,
       y,
       speed,
+      horizontalSpeed,
       enemy,
       width: enemy ? 5 : 4,
       height: 13,
@@ -169,6 +170,7 @@ class Bullet {
   }
 
   update(deltaTime) {
+    this.x += this.horizontalSpeed * deltaTime;
     this.y += this.speed * deltaTime;
   }
 
@@ -259,18 +261,32 @@ class Boss {
       width,
       height,
       direction: 1,
+      targetX: canvasWidth / 2 - width / 2,
+      targetTimer: 0,
+      speedFactor: 1,
       fireTimer: config.fireDelay,
       maxHealth: config.health,
     });
   }
 
-  update(deltaTime, canvasWidth) {
-    this.x += this.speed * this.direction * deltaTime;
-
-    if (this.x <= 22 || this.x + this.width >= canvasWidth - 22) {
-      this.direction *= -1;
-      this.x = Math.max(22, Math.min(canvasWidth - this.width - 22, this.x));
+  update(deltaTime, canvasWidth, player, random = Math.random) {
+    this.targetTimer -= deltaTime;
+    if (this.targetTimer <= 0) {
+      const playerCenter = player.x + player.width / 2;
+      const pursuitOffset = (random() * 2 - 1) * Math.min(150, canvasWidth * 0.2);
+      this.targetX = Math.max(22, Math.min(
+        canvasWidth - this.width - 22,
+        playerCenter - this.width / 2 + pursuitOffset,
+      ));
+      this.targetTimer = 0.42 + random() * 0.9;
+      this.speedFactor = 0.7 + random() * 0.65;
     }
+
+    const distance = this.targetX - this.x;
+    if (Math.abs(distance) > 3) this.direction = Math.sign(distance);
+    const step = Math.min(Math.abs(distance), this.speed * this.speedFactor * deltaTime);
+    this.x += step * this.direction;
+    this.x = Math.max(22, Math.min(canvasWidth - this.width - 22, this.x));
 
     this.fireTimer -= deltaTime;
   }
@@ -398,7 +414,8 @@ class Game {
     this.lastTime = 0;
     this.bindControls = options.bindControls !== false;
     this.ui = options.ui || this.findUi();
-    this.background = typeof Image === "undefined" ? null : new Image();
+    this.backgrounds = this.preloadBackgrounds();
+    this.background = null;
 
     if (this.bindControls) {
       this.setupControls();
@@ -421,6 +438,20 @@ class Game {
     };
   }
 
+  preloadBackgrounds() {
+    const backgrounds = new Map();
+    if (typeof Image === "undefined") return backgrounds;
+
+    LEVELS.forEach(({ background }) => {
+      const image = new Image();
+      image.src = background;
+      const decoding = image.decode?.();
+      decoding?.catch(() => {});
+      backgrounds.set(background, image);
+    });
+    return backgrounds;
+  }
+
   resetCampaign() {
     this.score = 0;
     this.lives = 3;
@@ -433,9 +464,7 @@ class Game {
   loadLevel() {
     const level = LEVELS[this.levelIndex];
 
-    if (this.background) {
-      this.background.src = level.background;
-    }
+    this.background = this.backgrounds.get(level.background) || null;
 
     if (this.canvas.style) {
       this.canvas.style.backgroundImage = `url("${level.background}")`;
@@ -632,13 +661,19 @@ class Game {
   updateBoss(deltaTime) {
     if (!this.boss) return;
 
-    this.boss.update(deltaTime, this.canvas.width);
+    this.boss.update(deltaTime, this.canvas.width, this.player, this.random);
     if (this.boss.fireTimer <= 0) {
       const bulletSpeed = 195 + this.levelIndex * 25;
       const origins = this.levelIndex === 0 ? [this.boss.width / 2] : [30, this.boss.width - 30];
 
       origins.forEach((offset) => {
-        this.enemyBullets.push(new Bullet(this.boss.x + offset, this.boss.y + this.boss.height, bulletSpeed, true));
+        const originX = this.boss.x + offset;
+        const originY = this.boss.y + this.boss.height;
+        const targetX = this.player.x + this.player.width / 2;
+        const targetY = this.player.y + this.player.height / 2;
+        const travelTime = Math.max(0.1, (targetY - originY) / bulletSpeed);
+        const horizontalSpeed = (targetX - originX) / travelTime;
+        this.enemyBullets.push(new Bullet(originX, originY, bulletSpeed, true, horizontalSpeed));
       });
 
       this.audio.alienShoot();

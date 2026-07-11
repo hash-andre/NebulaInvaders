@@ -100,13 +100,20 @@ test("new campaign creates the first fleet and initializes the HUD", () => {
   assert.equal(ui.score.textContent, "00000");
   assert.equal(ui.lives.textContent, "♥ ♥ ♥");
   assert.equal(ui.level.textContent, "Level 1/3");
-  assert.match(canvas.style.backgroundImage, /level-1-background\.png/);
+  assert.match(canvas.style.backgroundImage, /level-1-background\.webp/);
 });
 
 test("bullets move according to elapsed time", () => {
   const bullet = new Bullet(10, 100, -350);
   bullet.update(0.2);
   assert.equal(bullet.y, 30);
+});
+
+test("aimed bullets move horizontally as well as vertically", () => {
+  const bullet = new Bullet(100, 100, 200, true, -80);
+  bullet.update(0.25);
+  assert.equal(bullet.x, 80);
+  assert.equal(bullet.y, 150);
 });
 
 test("clearing a fleet starts that level's boss phase", () => {
@@ -143,7 +150,37 @@ test("defeating a boss preserves progress and unlocks the next level", () => {
   assert.equal(game.levelIndex, 1);
   assert.equal(game.score, 250 + LEVELS[0].boss.score);
   assert.equal(game.lives, 2);
-  assert.match(canvas.style.backgroundImage, /level-2-background\.png/);
+  assert.match(canvas.style.backgroundImage, /level-2-background\.webp/);
+});
+
+test("boss movement picks irregular targets around the player", () => {
+  const { game } = createGame();
+  game.spawnBoss();
+  game.player.x = 8;
+  game.boss.update(0.5, game.canvas.width, game.player, () => 0.5);
+
+  assert.equal(game.boss.direction, -1);
+  assert.ok(game.boss.targetX < game.canvas.width / 2);
+  assert.ok(game.boss.targetTimer > 0);
+});
+
+test("boss projectiles are aimed at players hiding at either edge", () => {
+  [8, 720 - 46 - 8].forEach((playerX) => {
+    const { game } = createGame();
+    game.levelIndex = 1;
+    game.loadLevel();
+    game.spawnBoss();
+    game.player.x = playerX;
+    game.boss.fireTimer = 0;
+    game.updateBoss(0);
+
+    assert.ok(game.enemyBullets.length > 0);
+    game.enemyBullets.forEach((bullet) => {
+      const travelTime = (game.player.y + game.player.height / 2 - bullet.y) / bullet.speed;
+      bullet.update(travelTime);
+      assert.ok(bullet.x >= game.player.x && bullet.x <= game.player.x + game.player.width);
+    });
+  });
 });
 
 test("every boss has a distinct silhouette and audio identity", () => {

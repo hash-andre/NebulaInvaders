@@ -53,6 +53,14 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Precaricamento fondali, boss adattivi e rotazione touch
+
+- Convertiti i fondali dei livelli in WebP 1080×720 e precaricati tutti all'avvio, riutilizzando la stessa immagine decodificata durante i cambi di settore.
+- Reso il movimento dei boss meno ciclico con obiettivi e velocità a durata casuale, scelti attorno alla posizione corrente del giocatore.
+- Trasformati gli spari dei boss in proiettili bidimensionali mirati al centro della navicella, eliminando le zone sicure lungo i bordi laterali.
+- Conservato lo scorrimento verticale su telefoni e tablet in orizzontale e introdotta una composizione landscape compatta che mantiene visibili intestazione, gioco, controlli e suggerimento.
+- Estesa la suite automatica per movimento orizzontale dei proiettili, inseguimento del boss e copertura di entrambi i bordi.
+
 ### Versione iniziale estesa
 
 - Ridisegnata l'interfaccia e centrato il gioco nella pagina.
