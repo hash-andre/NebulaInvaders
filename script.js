@@ -84,11 +84,10 @@ class Game {
       document.documentElement.dataset.orientation = innerWidth > innerHeight ? "landscape" : "portrait";
       resetInputs();
     };
-    let viewportTimer;
+    let viewportFrame;
     const scheduleViewportSync = () => {
-      syncViewport();
-      clearTimeout(viewportTimer);
-      viewportTimer = setTimeout(syncViewport, 180);
+      cancelAnimationFrame(viewportFrame);
+      viewportFrame = requestAnimationFrame(syncViewport);
     };
     addEventListener("blur", resetInputs);
     addEventListener("resize", scheduleViewportSync, { passive: true });
