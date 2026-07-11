@@ -160,6 +160,23 @@ test("collision detection requires overlapping rectangles", () => {
   assert.equal(game.hit({ x: 30, y: 20, width: 2, height: 2 }, target), false);
 });
 
+test("a fatal hit cannot start a boss after game over", () => {
+  const { game } = createGame();
+  game.running = true;
+  game.lives = 1;
+  game.invaders = [];
+  game.enemyBullets = [
+    new Bullet(game.player.x, game.player.y, 0, true),
+  ];
+
+  game.update(0);
+
+  assert.equal(game.ended, true);
+  assert.equal(game.running, false);
+  assert.equal(game.phase, "fleet");
+  assert.equal(game.boss, null);
+});
+
 test("viewport synchronization no longer uses a delayed timeout", () => {
   const source = fs.readFileSync(path.join(__dirname, "..", "script.js"), "utf8");
   const viewportSection = source.slice(source.indexOf("const syncViewport"), source.indexOf("this.ui.action"));

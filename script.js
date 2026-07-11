@@ -270,10 +270,6 @@ class Game {
     this.ui = options.ui || this.findUi();
     this.background = typeof Image === "undefined" ? null : new Image();
 
-    if (this.background) {
-      this.background.src = "assets/space-background.png";
-    }
-
     if (this.bindControls) {
       this.setupControls();
     }
@@ -449,6 +445,8 @@ class Game {
 
     this.updateUfo(deltaTime);
     this.collisions();
+
+    if (!this.running) return;
 
     if (this.phase === "fleet" && this.invaders.some((invader) => invader.y + invader.height >= this.player.y)) {
       this.finish(false);
@@ -668,7 +666,7 @@ class Game {
     const context = this.ctx;
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    if (this.background?.complete) {
+    if (this.background?.complete && this.background.naturalWidth) {
       context.globalAlpha = 0.7;
       context.drawImage(this.background, 0, 0, this.canvas.width, this.canvas.height);
       context.globalAlpha = 1;
