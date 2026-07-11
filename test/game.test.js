@@ -153,22 +153,26 @@ test("shooting and taking damage use distinct haptic feedback", () => {
   assert.ok(game.effects.some((effect) => effect instanceof Explosion));
 });
 
-test("the mobile joystick moves continuously across both directions and springs to center", () => {
+test("the mobile arcade joystick switches both directions at full speed and springs to center", () => {
   const { game } = createGame();
   game.joystick = createElement();
   game.joystickThumb = createElement();
   const startX = game.player.x;
 
   game.setJoystickValue(-0.8);
-  assert.equal(game.touchAxis, -0.8);
-  assert.ok(Math.abs(parseFloat(game.joystickThumb.style.left) - 18.8) < 0.001);
+  assert.equal(game.touchAxis, -1);
+  assert.equal(game.joystickThumb.style.left, "18%");
   assert.equal(game.joystick.getAttribute("aria-valuetext"), "Left");
   game.updatePlayer(1 / 60);
-  assert.ok(game.player.x < startX);
+  assert.equal(game.player.x, startX - game.player.speed, "binary input must use full player speed");
 
   game.setJoystickValue(0.75);
-  assert.equal(game.touchAxis, 0.75);
+  assert.equal(game.touchAxis, 1);
+  assert.equal(game.joystickThumb.style.left, "82%");
   assert.equal(game.joystick.getAttribute("aria-valuetext"), "Right");
+
+  game.setJoystickValue(0.1);
+  assert.equal(game.touchAxis, 0, "the center dead zone must switch movement off");
 
   game.resetJoystick();
   assert.equal(game.touchAxis, 0);

@@ -54,6 +54,12 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Joystick arcade binario
+
+- Compattato il controllo orizzontale mobile e ridisegnato il cursore come pomello circolare da cabinato.
+- Sostituito il movimento proporzionale con tre stati netti: sinistra a velocità piena, neutro e destra a velocità piena.
+- Conservati trascinamento continuo tra le direzioni, zona morta centrale e ritorno automatico al rilascio.
+
 ### Joystick orizzontale touch
 
 - Sostituiti i due pulsanti direzionali mobile con uno slider a ritorno automatico, trascinabile da sinistra a destra senza sollevare il dito.

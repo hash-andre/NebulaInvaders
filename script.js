@@ -744,7 +744,7 @@ class Game {
     const updateJoystick = (event) => {
       if (joystickPointer !== event.pointerId) return;
       const bounds = this.joystick.getBoundingClientRect();
-      const value = (event.clientX - bounds.left - bounds.width / 2) / (bounds.width * 0.39);
+      const value = (event.clientX - bounds.left - bounds.width / 2) / (bounds.width * 0.32);
       this.setJoystickValue(value);
     };
     const joystickPress = (event) => {
@@ -802,11 +802,11 @@ class Game {
 
   setJoystickValue(value) {
     const normalized = Math.max(-1, Math.min(1, value));
-    this.touchAxis = Math.abs(normalized) < 0.12 ? 0 : normalized;
+    this.touchAxis = Math.abs(normalized) < 0.2 ? 0 : Math.sign(normalized);
     if (!this.joystick || !this.joystickThumb) return;
 
-    this.joystickThumb.style.left = `${50 + normalized * 39}%`;
-    this.joystick.setAttribute("aria-valuenow", String(Math.round(normalized * 100)));
+    this.joystickThumb.style.left = `${50 + this.touchAxis * 32}%`;
+    this.joystick.setAttribute("aria-valuenow", String(this.touchAxis * 100));
     const direction = this.touchAxis < 0 ? "Left" : this.touchAxis > 0 ? "Right" : "Centered";
     this.joystick.setAttribute("aria-valuetext", direction);
   }
