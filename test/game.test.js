@@ -65,7 +65,7 @@ function createAudio() {
   return audio;
 }
 
-function createGame() {
+function createGame(options = {}) {
   const canvas = {
     width: 720,
     height: 480,
@@ -82,6 +82,7 @@ function createGame() {
     bindControls: false,
     random: () => 0.5,
     vibrate: (pattern) => vibrations.push(pattern),
+    ...options,
   });
 
   return { game, canvas, ui, audio, vibrations };
@@ -194,6 +195,44 @@ test("Enter starts the next unlocked level", () => {
   assert.equal(game.levelIndex, 1);
   assert.equal(game.running, true);
   assert.equal(game.pendingNextLevel, false);
+});
+
+test("mobile landscape pauses the game and warns only once per rotation", () => {
+  const alerts = [];
+  const { game } = createGame({
+    isMobileDevice: () => true,
+    alert: (message) => alerts.push(message),
+  });
+  game.running = true;
+
+  game.handleOrientation(true);
+  assert.equal(game.paused, true);
+  assert.equal(alerts.length, 1);
+  assert.match(alerts[0], /portrait mode/);
+
+  game.handleOrientation(true);
+  assert.equal(alerts.length, 1, "resize events in the same rotation must not repeat the alert");
+  game.togglePause();
+  assert.equal(game.paused, true, "the game cannot resume while landscape is still active");
+  assert.equal(alerts.length, 2, "an explicit resume attempt repeats the orientation reminder");
+
+  game.handleOrientation(false);
+  assert.equal(game.paused, true, "returning to portrait must not resume automatically");
+  game.togglePause();
+  assert.equal(game.paused, false, "the player can resume after returning to portrait");
+  game.handleOrientation(true);
+  assert.equal(game.paused, true);
+  assert.equal(alerts.length, 3);
+});
+
+test("the page includes an SVG favicon and a single-line mobile HUD", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "..", "style.css"), "utf8");
+
+  assert.match(html, /rel="icon" href="assets\/favicon\.svg"/);
+  assert.equal(fs.existsSync(path.join(__dirname, "..", "assets", "favicon.svg")), true);
+  assert.match(css, /grid-template-columns: minmax\(0, 1\.55fr\) minmax\(0, \.9fr\) minmax\(0, \.65fr\)/);
+  assert.match(css, /white-space: nowrap/);
 });
 
 test("clearing a fleet starts that level's boss phase", () => {

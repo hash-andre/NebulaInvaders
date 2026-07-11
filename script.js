@@ -508,6 +508,13 @@ class Game {
         navigator.vibrate(pattern);
       }
     });
+    this.isMobileDevice = options.isMobileDevice || (() => (
+      typeof window !== "undefined"
+      && window.matchMedia("(pointer: coarse)").matches
+    ));
+    this.showAlert = options.alert || ((message) => window.alert(message));
+    this.landscapeWarningShown = false;
+    this.portraitRequired = false;
     this.keys = {};
     this.running = false;
     this.paused = false;
@@ -642,9 +649,11 @@ class Game {
 
     const syncViewport = () => {
       const height = window.visualViewport?.height || window.innerHeight;
+      const landscape = innerWidth > innerHeight;
       document.documentElement.style.setProperty("--app-height", `${Math.round(height)}px`);
-      document.documentElement.dataset.orientation = innerWidth > innerHeight ? "landscape" : "portrait";
+      document.documentElement.dataset.orientation = landscape ? "landscape" : "portrait";
       resetInputs();
+      this.handleOrientation(landscape);
     };
 
     let viewportFrame;
@@ -660,6 +669,27 @@ class Game {
     this.ui.action.addEventListener("click", () => this.start());
     this.ui.pause.addEventListener("click", () => this.togglePause());
     syncViewport();
+  }
+
+  handleOrientation(landscape) {
+    if (!landscape) {
+      this.landscapeWarningShown = false;
+      this.portraitRequired = false;
+      return;
+    }
+
+    if (!this.isMobileDevice()) return;
+
+    this.portraitRequired = true;
+    if (this.landscapeWarningShown) return;
+
+    this.landscapeWarningShown = true;
+    if (this.running && !this.paused) this.togglePause();
+    this.showPortraitAlert();
+  }
+
+  showPortraitAlert() {
+    this.showAlert("Please rotate your device back to portrait mode to continue playing.");
   }
 
   handleKeyDown(event) {
@@ -687,6 +717,11 @@ class Game {
   }
 
   start() {
+    if (this.portraitRequired) {
+      this.showPortraitAlert();
+      return;
+    }
+
     this.audio.init();
 
     if (this.paused) {
@@ -716,6 +751,10 @@ class Game {
 
   togglePause() {
     if (!this.running || this.ended || this.pendingNextLevel) return;
+    if (this.paused && this.portraitRequired) {
+      this.showPortraitAlert();
+      return;
+    }
 
     this.paused = !this.paused;
     this.keys.ArrowLeft = false;

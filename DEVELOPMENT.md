@@ -54,6 +54,14 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Orientamento mobile, HUD compatto e favicon
+
+- Rilevata la rotazione landscape sui dispositivi a puntatore coarse: una partita attiva viene messa in pausa e un alert chiede di tornare in verticale.
+- Evitati alert ripetuti durante i resize della stessa rotazione; una nuova segnalazione è consentita soltanto dopo il ritorno in portrait.
+- Aumentati margine superiore mobile e distanza tra intestazione e card per centrare meglio la composizione nello schermo.
+- Compresso l'HUD mobile in tre colonne, mantenendo score, stato e vite sulla stessa riga con testi adattivi e troncamento dello stato più lungo.
+- Aggiunta una favicon SVG originale e il colore tema per l'interfaccia del browser.
+
 ### Feedback aptico, esplosioni e fanfara finale
 
 - Integrata la Vibration API con impulso breve allo sparo e sequenza più intensa quando il giocatore subisce danni; sui dispositivi non compatibili il comportamento degrada senza errori.

@@ -41,6 +41,7 @@ Every level uses its own generated, preloaded WebP space background. The backgro
 - Web Audio sound effects with an audio toggle.
 - A focused dark arcade interface.
 - Responsive canvas and HUD for small phones, tablets, desktops, and large displays.
+- Automatic pause and portrait-orientation warning on mobile landscape rotation.
 - Touch controls built with Pointer Events and safe-area support.
 - Keyboard hints with vertically centered `<kbd>` content.
 - Start, level transition, victory, game-over, and campaign restart screens.
@@ -72,6 +73,7 @@ The tests use Node's built-in test runner, so `npm install` is not required.
 ```text
 .
 ├── assets/
+│   ├── favicon.svg
 │   ├── level-1-background.webp
 │   ├── level-2-background.webp
 │   └── level-3-background.webp

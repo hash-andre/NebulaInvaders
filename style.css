@@ -71,15 +71,21 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
 
 @media (max-width: 640px), (pointer: coarse) and (max-width: 1024px) {
   body { overflow: auto; overscroll-behavior: none; }
-  .hud-center { display: none; }
-  .page-shell { width: min(100% - 16px, 560px); min-width: 0; min-height: var(--app-height); height: auto; justify-content: flex-start; padding: max(14px, env(safe-area-inset-top)) 0 max(12px, env(safe-area-inset-bottom)); }
-  .hero { margin-bottom: 12px; }
+  .page-shell { width: min(100% - 16px, 560px); min-width: 0; min-height: var(--app-height); height: auto; justify-content: flex-start; padding: max(32px, calc(env(safe-area-inset-top) + 24px)) 0 max(12px, env(safe-area-inset-bottom)); }
+  .hero { margin-bottom: clamp(22px, 4vh, 34px); }
   .eyebrow { display: none; }
   h1 { font-size: clamp(30px, 10vw, 44px); }
   .intro { margin-top: 7px; font-size: 10px; }
   .game-card { border-radius: 14px; }
-  .hud { height: 48px; grid-template-columns: 1fr 1fr; padding: 0 14px; }
-  .hud strong { font-size: 18px; }
+  .hud { height: 48px; grid-template-columns: minmax(0, 1.55fr) minmax(0, .9fr) minmax(0, .65fr); gap: 5px; padding: 0 10px; }
+  .hud > div { min-width: 0; gap: 5px; white-space: nowrap; }
+  .hud-label { font-size: 7px; letter-spacing: .1em; }
+  .hud strong { font-size: 15px; letter-spacing: .04em; }
+  .hud-level { font-size: 6px; letter-spacing: .03em; }
+  .hud-center { display: flex; justify-content: center; gap: 4px; overflow: hidden; font-size: 7px; letter-spacing: .04em; }
+  .hud-center span:last-child { overflow: hidden; text-overflow: ellipsis; }
+  .status-dot { flex: 0 0 auto; width: 5px; height: 5px; }
+  #lives { letter-spacing: .06em; }
   canvas { touch-action: none; }
   .start-panel { border-radius: 0; }
   .start-panel h2 { font-size: clamp(25px, 8vw, 38px); }
@@ -106,14 +112,15 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
 }
 
 @media (max-width: 390px) {
-  .page-shell { width: calc(100% - 10px); padding-top: max(10px, env(safe-area-inset-top)); }
-  .hero { margin-bottom: 8px; }
+  .page-shell { width: calc(100% - 10px); padding-top: max(26px, calc(env(safe-area-inset-top) + 18px)); }
+  .hero { margin-bottom: 20px; }
   h1 { font-size: clamp(27px, 10vw, 36px); }
   .intro { font-size: 9px; }
-  .hud { height: 44px; padding: 0 10px; }
-  .hud > div { gap: 7px; }
-  .hud strong { font-size: 16px; }
-  .hud-level { font-size: 7px; }
+  .hud { height: 44px; gap: 3px; padding: 0 7px; }
+  .hud > div { gap: 3px; }
+  .hud-label, .hud-center { font-size: 6px; }
+  .hud strong { font-size: 14px; }
+  .hud-level { font-size: 5.5px; }
   .touch-controls { padding-top: 9px; }
   .touch-button { width: clamp(54px, 18vw, 66px); height: 54px; }
   .fire-button { width: 68px; }
@@ -121,7 +128,7 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
 
 @media (max-width: 340px), (max-height: 600px) and (orientation: portrait) {
   .intro, .tip { display: none; }
-  .hero { margin-bottom: 6px; }
+  .hero { margin-bottom: 14px; }
   .controls-bar { min-height: 40px; }
   .pause-button, .sound-button { min-height: 40px; }
   .touch-controls { padding-top: 6px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
