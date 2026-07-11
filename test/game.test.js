@@ -39,8 +39,21 @@ function createAudio() {
   const calls = [];
   const audio = { calls, enabled: true };
 
-  ["init", "shoot", "alienShoot", "move", "hit", "bonus", "win", "lose"].forEach((method) => {
-    audio[method] = () => calls.push(method);
+  [
+    "init",
+    "shoot",
+    "alienShoot",
+    "move",
+    "hit",
+    "bonus",
+    "win",
+    "lose",
+    "bossAppear",
+    "bossShoot",
+    "bossHit",
+    "bossDefeat",
+  ].forEach((method) => {
+    audio[method] = (levelIndex) => calls.push([method, levelIndex]);
   });
 
   return audio;
@@ -97,7 +110,7 @@ test("bullets move according to elapsed time", () => {
 });
 
 test("clearing a fleet starts that level's boss phase", () => {
-  const { game, ui } = createGame();
+  const { game, ui, audio } = createGame();
   game.running = true;
   game.invaders = [];
 
@@ -107,10 +120,11 @@ test("clearing a fleet starts that level's boss phase", () => {
   assert.equal(game.boss.name, LEVELS[0].boss.name);
   assert.equal(game.boss.health, LEVELS[0].boss.health);
   assert.match(ui.status.textContent, /Orbital Sentinel/);
+  assert.deepEqual(audio.calls.at(-1), ["bossAppear", 0]);
 });
 
 test("defeating a boss preserves progress and unlocks the next level", () => {
-  const { game, canvas, ui } = createGame();
+  const { game, canvas, ui, audio } = createGame();
   game.score = 250;
   game.lives = 2;
   game.spawnBoss();
@@ -122,6 +136,7 @@ test("defeating a boss preserves progress and unlocks the next level", () => {
   assert.equal(game.pendingNextLevel, true);
   assert.equal(game.running, false);
   assert.equal(ui.action.textContent, "Next level");
+  assert.equal(audio.calls.some(([method, level]) => method === "bossDefeat" && level === 0), true);
 
   game.start();
 
@@ -129,6 +144,24 @@ test("defeating a boss preserves progress and unlocks the next level", () => {
   assert.equal(game.score, 250 + LEVELS[0].boss.score);
   assert.equal(game.lives, 2);
   assert.match(canvas.style.backgroundImage, /level-2-background\.png/);
+});
+
+test("every boss has a distinct silhouette and audio identity", () => {
+  assert.deepEqual(LEVELS.map((level) => level.boss.kind), ["sentinel", "twin-core", "sovereign"]);
+
+  LEVELS.forEach((level, levelIndex) => {
+    const { game, audio } = createGame();
+    game.levelIndex = levelIndex;
+    game.loadLevel();
+    game.spawnBoss();
+    const dimensions = [game.boss.width, game.boss.height];
+
+    game.boss.health -= 1;
+    game.damageBoss();
+
+    assert.deepEqual(audio.calls.at(-1), ["bossHit", levelIndex]);
+    assert.equal(dimensions[0] > 100, true);
+  });
 });
 
 test("the final boss awards boss points and the remaining-life bonus once", () => {
@@ -146,7 +179,7 @@ test("the final boss awards boss points and the remaining-life bonus once", () =
   assert.equal(game.score, expectedScore);
   assert.equal(game.ended, true);
   assert.equal(ui.title.textContent, "Galaxy saved");
-  assert.equal(audio.calls.filter((call) => call === "win").length, 1);
+  assert.equal(audio.calls.filter(([method]) => method === "win").length, 1);
 
   game.finish(true);
   assert.equal(game.score, expectedScore, "finish must be idempotent");

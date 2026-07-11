@@ -20,16 +20,16 @@ Score and remaining lives carry over between levels. Completing the campaign awa
 
 | Level | Sector | Boss | Character |
 | --- | --- | --- | --- |
-| 1 | Outer Patrol | Orbital Sentinel | Introductory fleet and single-shot boss |
-| 2 | Meteor Foundry | Twin Core | Denser formation and twin boss projectiles |
-| 3 | Nebula Throne | Void Sovereign | Fastest fleet, strongest boss, and final encounter |
+| 1 | Outer Patrol | Orbital Sentinel | Ring-shaped guardian with a descending laser cue |
+| 2 | Meteor Foundry | Twin Core | Dual-reactor silhouette, twin projectiles, and layered audio |
+| 3 | Nebula Throne | Void Sovereign | Winged final boss with heavy, dissonant sound design |
 
 Every level uses its own generated space background. The backgrounds keep the center of the playfield dark enough for bullets, enemies, and the player ship to remain readable.
 
 ## Features
 
 - Three-level campaign with persistent score and lives.
-- Three bosses with increasing health, speed, fire rate, and rewards.
+- Three visually distinct bosses with custom entrance, firing, hit, and destruction sounds.
 - Animated invader fleets with progressively harder formations.
 - Enemy projectiles, collision handling, and increasing fleet speed.
 - Golden UFO bonus encounters.

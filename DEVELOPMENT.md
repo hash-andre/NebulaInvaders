@@ -132,6 +132,13 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 - Aggiunti test con `node:test` per configurazione dei livelli, esistenza e unicità dei fondali, inizializzazione HUD, movimento dei proiettili, collisioni, comparsa dei boss, avanzamento e vittoria finale.
 - Resa `Game` testabile tramite injection opzionale di UI, audio, generatore casuale e binding dei controlli, senza cambiare il bootstrap usato dal browser.
 
+### Identità visiva e sonora dei boss
+
+- Sostituita la sagoma condivisa con tre design Canvas dedicati: il Sentinel ad anello, il Twin Core a doppio reattore e il Sovereign con silhouette alata e nucleo romboidale.
+- Assegnate dimensioni e collision box diverse a ogni boss, oltre a pulsazioni luminose animate e una barra HP etichettata `LEVEL BOSS`.
+- Aggiunti cue Web Audio specifici per entrata, sparo, danno e distruzione; frequenze, forme d'onda, intervalli e stratificazione cambiano per ogni livello.
+- Sostituito il suono di sparo alieno generico durante le boss fight e aggiunti test sull'identità, sull'ingresso e sulla sconfitta dei boss.
+
 ## Deployment GitHub Pages
 
 Il progetto non richiede build: GitHub Pages deve pubblicare direttamente i file presenti nella root del branch `main`.

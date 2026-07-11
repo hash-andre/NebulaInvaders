@@ -8,6 +8,7 @@ const LEVELS = [
     drop: 16,
     enemyFireDelay: [1.1, 2.1],
     boss: {
+      kind: "sentinel",
       name: "Orbital Sentinel",
       health: 6,
       speed: 72,
@@ -25,6 +26,7 @@ const LEVELS = [
     drop: 18,
     enemyFireDelay: [0.8, 1.65],
     boss: {
+      kind: "twin-core",
       name: "Twin Core",
       health: 10,
       speed: 92,
@@ -42,6 +44,7 @@ const LEVELS = [
     drop: 20,
     enemyFireDelay: [0.62, 1.35],
     boss: {
+      kind: "sovereign",
       name: "Void Sovereign",
       health: 14,
       speed: 112,
@@ -92,6 +95,47 @@ class AudioEngine {
   alienShoot() { this.tone(180, 0.13, "sawtooth", 0.025, 420); }
   move() { this.tone([90, 105, 125, 150][this.step++ % 4], 0.055, "square", 0.018); }
   hit() { this.tone(130, 0.12, "sawtooth", 0.04, 45); }
+
+  bossAppear(levelIndex) {
+    const sequences = [
+      [[82, 0], [123, 110], [185, 220]],
+      [[110, 0], [165, 0], [98, 150], [196, 300]],
+      [[220, 0], [147, 100], [98, 200], [55, 320]],
+    ];
+
+    sequences[levelIndex].forEach(([frequency, delay], noteIndex) => {
+      setTimeout(() => {
+        const type = levelIndex === 2 ? "sawtooth" : noteIndex % 2 ? "square" : "triangle";
+        this.tone(frequency, 0.28, type, 0.055, frequency * 0.7);
+      }, delay);
+    });
+  }
+
+  bossShoot(levelIndex) {
+    if (levelIndex === 0) {
+      this.tone(310, 0.18, "sawtooth", 0.045, 75);
+    } else if (levelIndex === 1) {
+      this.tone(190, 0.16, "square", 0.035, 95);
+      this.tone(285, 0.16, "square", 0.028, 140);
+    } else {
+      this.tone(92, 0.24, "sawtooth", 0.055, 38);
+      this.tone(740, 0.09, "square", 0.022, 260);
+    }
+  }
+
+  bossHit(levelIndex) {
+    const frequencies = [170, 125, 76];
+    this.tone(frequencies[levelIndex], 0.14, "sawtooth", 0.05, 34);
+  }
+
+  bossDefeat(levelIndex) {
+    const roots = [220, 174, 130];
+    [1, 0.75, 0.5, 0.25].forEach((ratio, index) => {
+      setTimeout(() => {
+        this.tone(roots[levelIndex] * ratio, 0.34, "sawtooth", 0.06, 30);
+      }, index * 105);
+    });
+  }
 
   bonus() {
     [660, 880, 1_100].forEach((frequency, index) => {
@@ -202,11 +246,18 @@ class Invader {
 
 class Boss {
   constructor(config, canvasWidth) {
+    const sizes = {
+      sentinel: [126, 56],
+      "twin-core": [144, 60],
+      sovereign: [160, 68],
+    };
+    const [width, height] = sizes[config.kind];
+
     Object.assign(this, config, {
-      x: canvasWidth / 2 - 58,
-      y: 48,
-      width: 116,
-      height: 48,
+      x: canvasWidth / 2 - width / 2,
+      y: 52,
+      width,
+      height,
       direction: 1,
       fireTimer: config.fireDelay,
       maxHealth: config.health,
@@ -224,36 +275,115 @@ class Boss {
     this.fireTimer -= deltaTime;
   }
 
-  draw(context, levelIndex) {
+  draw(context, time) {
     const center = this.width / 2;
+    const pulse = 0.78 + Math.sin(time / 140) * 0.22;
 
     context.save();
     context.translate(this.x, this.y);
-    context.shadowBlur = 20;
+    context.shadowBlur = 20 + pulse * 10;
     context.shadowColor = this.color;
+
+    if (this.kind === "sentinel") this.drawSentinel(context, center, pulse);
+    else if (this.kind === "twin-core") this.drawTwinCore(context, pulse);
+    else this.drawSovereign(context, center, pulse);
+
+    context.restore();
+  }
+
+  drawSentinel(context, center, pulse) {
+    context.fillStyle = this.color;
+    context.beginPath();
+    context.moveTo(0, 34);
+    context.lineTo(24, 17);
+    context.lineTo(center, 9);
+    context.lineTo(this.width - 24, 17);
+    context.lineTo(this.width, 34);
+    context.lineTo(this.width - 30, 42);
+    context.lineTo(30, 42);
+    context.closePath();
+    context.fill();
+
+    context.fillStyle = "#111326";
+    context.beginPath();
+    context.ellipse(center, 28, 31, 22, 0, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = "#fff0fa";
+    context.lineWidth = 3;
+    context.beginPath();
+    context.ellipse(center, 28, 21 + pulse * 2, 14 + pulse, 0, 0, Math.PI * 2);
+    context.stroke();
+    context.fillStyle = this.color;
+    context.beginPath();
+    context.arc(center, 28, 7 + pulse * 2, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  drawTwinCore(context, pulse) {
+    context.fillStyle = "#18142f";
+    context.fillRect(38, 22, this.width - 76, 18);
+
+    [34, this.width - 34].forEach((center) => {
+      context.fillStyle = this.color;
+      context.beginPath();
+      context.moveTo(center, 0);
+      context.lineTo(center + 29, 15);
+      context.lineTo(center + 25, 48);
+      context.lineTo(center, 60);
+      context.lineTo(center - 25, 48);
+      context.lineTo(center - 29, 15);
+      context.closePath();
+      context.fill();
+      context.fillStyle = "#15132b";
+      context.beginPath();
+      context.arc(center, 29, 17, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = "#ffffff";
+      context.beginPath();
+      context.arc(center, 29, 5 + pulse * 2, 0, Math.PI * 2);
+      context.fill();
+    });
+
+    context.fillStyle = this.color;
+    context.fillRect(this.width / 2 - 9, 13, 18, 36);
+  }
+
+  drawSovereign(context, center, pulse) {
     context.fillStyle = this.color;
     context.beginPath();
     context.moveTo(center, 0);
-    context.lineTo(this.width - 12, 12);
-    context.lineTo(this.width, 34);
-    context.lineTo(this.width - 24, this.height);
-    context.lineTo(24, this.height);
-    context.lineTo(0, 34);
-    context.lineTo(12, 12);
+    context.lineTo(center + 18, 17);
+    context.lineTo(this.width - 13, 5);
+    context.lineTo(this.width - 34, 31);
+    context.lineTo(this.width, 43);
+    context.lineTo(this.width - 48, 52);
+    context.lineTo(this.width - 62, this.height);
+    context.lineTo(center, 56);
+    context.lineTo(62, this.height);
+    context.lineTo(48, 52);
+    context.lineTo(0, 43);
+    context.lineTo(34, 31);
+    context.lineTo(13, 5);
+    context.lineTo(center - 18, 17);
     context.closePath();
     context.fill();
-    context.fillStyle = "#16152d";
-    context.fillRect(20, 17, this.width - 40, 18);
-    context.fillStyle = "#fff";
-    context.fillRect(center - 5, 12, 10, 24);
 
-    if (levelIndex >= 1) {
-      context.fillStyle = "#16152d";
-      context.fillRect(8, 25, 16, 12);
-      context.fillRect(this.width - 24, 25, 16, 12);
-    }
-
-    context.restore();
+    context.fillStyle = "#081622";
+    context.beginPath();
+    context.moveTo(center, 10);
+    context.lineTo(center + 22, 34);
+    context.lineTo(center, 58);
+    context.lineTo(center - 22, 34);
+    context.closePath();
+    context.fill();
+    context.fillStyle = "#ffffff";
+    context.beginPath();
+    context.moveTo(center, 18 - pulse * 2);
+    context.lineTo(center + 9, 34);
+    context.lineTo(center, 49 + pulse * 2);
+    context.lineTo(center - 9, 34);
+    context.closePath();
+    context.fill();
   }
 }
 
@@ -494,7 +624,7 @@ class Game {
     if (this.enemyTimer <= 0 && this.invaders.length) {
       const shooter = this.bottomInvader();
       this.enemyBullets.push(new Bullet(shooter.x + 15, shooter.y + 24, 175 + this.levelIndex * 20, true));
-      this.audio.alienShoot();
+      this.audio.bossShoot(this.levelIndex);
       this.resetEnemyTimer();
     }
   }
@@ -552,7 +682,8 @@ class Game {
     this.ufo = null;
     this.bullets = [];
     this.boss = new Boss(LEVELS[this.levelIndex].boss, this.canvas.width);
-    this.ui.status.textContent = `${this.boss.name} · ${this.boss.health} HP`;
+    this.ui.status.textContent = `BOSS · ${this.boss.name} · ${this.boss.health} HP`;
+    this.audio.bossAppear(this.levelIndex);
   }
 
   collisions() {
@@ -598,9 +729,9 @@ class Game {
 
   damageBoss() {
     this.boss.health -= 1;
-    this.audio.hit();
 
     if (this.boss.health <= 0) {
+      this.audio.bossDefeat(this.levelIndex);
       this.score += this.boss.score;
       this.boss = null;
       this.updateHud();
@@ -608,7 +739,8 @@ class Game {
       return;
     }
 
-    this.ui.status.textContent = `${this.boss.name} · ${this.boss.health} HP`;
+    this.audio.bossHit(this.levelIndex);
+    this.ui.status.textContent = `BOSS · ${this.boss.name} · ${this.boss.health} HP`;
   }
 
   completeLevel() {
@@ -681,7 +813,7 @@ class Game {
 
     const animationFrame = Math.floor(performance.now() / 300) % 2;
     this.invaders.forEach((invader) => invader.draw(context, animationFrame));
-    this.boss?.draw(context, this.levelIndex);
+    this.boss?.draw(context, performance.now());
     this.bullets.forEach((bullet) => bullet.draw(context));
     this.enemyBullets.forEach((bullet) => bullet.draw(context));
     if (this.ufo) this.drawUfo(context);
@@ -689,15 +821,22 @@ class Game {
   }
 
   drawBossHealth(context) {
-    const width = 180;
+    const width = 210;
     const healthRatio = this.boss.health / this.boss.maxHealth;
     const x = (this.canvas.width - width) / 2;
 
     context.save();
+    context.font = '700 10px "Space Mono", monospace';
+    context.textAlign = "center";
+    context.fillStyle = "#ffffff";
+    context.shadowBlur = 8;
+    context.shadowColor = this.boss.color;
+    context.fillText(`LEVEL BOSS · ${this.boss.name.toUpperCase()}`, this.canvas.width / 2, 15);
+    context.shadowBlur = 0;
     context.fillStyle = "rgba(5, 5, 15, .75)";
-    context.fillRect(x, 12, width, 8);
+    context.fillRect(x, 22, width, 8);
     context.fillStyle = this.boss.color;
-    context.fillRect(x, 12, width * healthRatio, 8);
+    context.fillRect(x, 22, width * healthRatio, 8);
     context.restore();
   }
 
