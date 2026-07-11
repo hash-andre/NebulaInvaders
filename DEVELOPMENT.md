@@ -54,6 +54,13 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Overlay di rotazione e spaziatura mobile
+
+- Sostituito l'alert nativo con un overlay accessibile gestito dalla pagina, così può chiudersi automaticamente al ritorno in portrait.
+- Durante il landscape mobile viene nascosta l'intera interfaccia di gioco, lasciando visibili soltanto lo sfondo del sito e il messaggio di orientamento.
+- La partita viene messa in pausa prima di mostrare l'overlay e non può riprendere finché il dispositivo resta in landscape.
+- Aumentata ulteriormente la distanza tra intestazione e Canvas su desktop e mobile.
+
 ### Orientamento mobile, HUD compatto e favicon
 
 - Rilevata la rotazione landscape sui dispositivi a puntatore coarse: una partita attiva viene messa in pausa e un alert chiede di tornare in verticale.

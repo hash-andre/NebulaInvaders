@@ -37,6 +37,8 @@ function createUi() {
     copy: createElement(),
     action: createElement(),
     pause: createElement(),
+    shell: createElement(),
+    orientation: createElement(),
   };
 }
 
@@ -197,32 +199,29 @@ test("Enter starts the next unlocked level", () => {
   assert.equal(game.pendingNextLevel, false);
 });
 
-test("mobile landscape pauses the game and warns only once per rotation", () => {
-  const alerts = [];
-  const { game } = createGame({
-    isMobileDevice: () => true,
-    alert: (message) => alerts.push(message),
-  });
+test("mobile landscape pauses and hides the game until portrait returns", () => {
+  const { game, ui } = createGame({ isMobileDevice: () => true });
   game.running = true;
 
   game.handleOrientation(true);
   assert.equal(game.paused, true);
-  assert.equal(alerts.length, 1);
-  assert.match(alerts[0], /portrait mode/);
+  assert.equal(ui.shell.classList.contains("orientation-hidden"), true);
+  assert.equal(ui.shell.getAttribute("aria-hidden"), "true");
+  assert.equal(ui.orientation.classList.contains("is-visible"), true);
+  assert.equal(ui.orientation.getAttribute("aria-hidden"), "false");
 
   game.handleOrientation(true);
-  assert.equal(alerts.length, 1, "resize events in the same rotation must not repeat the alert");
   game.togglePause();
   assert.equal(game.paused, true, "the game cannot resume while landscape is still active");
-  assert.equal(alerts.length, 2, "an explicit resume attempt repeats the orientation reminder");
 
   game.handleOrientation(false);
   assert.equal(game.paused, true, "returning to portrait must not resume automatically");
+  assert.equal(ui.shell.classList.contains("orientation-hidden"), false);
+  assert.equal(ui.shell.getAttribute("aria-hidden"), "false");
+  assert.equal(ui.orientation.classList.contains("is-visible"), false);
+  assert.equal(ui.orientation.getAttribute("aria-hidden"), "true");
   game.togglePause();
   assert.equal(game.paused, false, "the player can resume after returning to portrait");
-  game.handleOrientation(true);
-  assert.equal(game.paused, true);
-  assert.equal(alerts.length, 3);
 });
 
 test("the page includes an SVG favicon and a single-line mobile HUD", () => {

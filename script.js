@@ -512,8 +512,6 @@ class Game {
       typeof window !== "undefined"
       && window.matchMedia("(pointer: coarse)").matches
     ));
-    this.showAlert = options.alert || ((message) => window.alert(message));
-    this.landscapeWarningShown = false;
     this.portraitRequired = false;
     this.keys = {};
     this.running = false;
@@ -543,6 +541,8 @@ class Game {
       copy: document.querySelector("#panel-copy"),
       action: document.querySelector("#action-button"),
       pause: document.querySelector("#pause-toggle"),
+      shell: document.querySelector("#page-shell"),
+      orientation: document.querySelector("#orientation-alert"),
     };
   }
 
@@ -673,23 +673,23 @@ class Game {
 
   handleOrientation(landscape) {
     if (!landscape) {
-      this.landscapeWarningShown = false;
       this.portraitRequired = false;
+      this.setOrientationOverlay(false);
       return;
     }
 
     if (!this.isMobileDevice()) return;
 
     this.portraitRequired = true;
-    if (this.landscapeWarningShown) return;
-
-    this.landscapeWarningShown = true;
     if (this.running && !this.paused) this.togglePause();
-    this.showPortraitAlert();
+    this.setOrientationOverlay(true);
   }
 
-  showPortraitAlert() {
-    this.showAlert("Please rotate your device back to portrait mode to continue playing.");
+  setOrientationOverlay(visible) {
+    this.ui.shell?.classList[visible ? "add" : "remove"]("orientation-hidden");
+    this.ui.shell?.setAttribute("aria-hidden", String(visible));
+    this.ui.orientation?.classList[visible ? "add" : "remove"]("is-visible");
+    this.ui.orientation?.setAttribute("aria-hidden", String(!visible));
   }
 
   handleKeyDown(event) {
@@ -717,10 +717,7 @@ class Game {
   }
 
   start() {
-    if (this.portraitRequired) {
-      this.showPortraitAlert();
-      return;
-    }
+    if (this.portraitRequired) return;
 
     this.audio.init();
 
@@ -751,10 +748,7 @@ class Game {
 
   togglePause() {
     if (!this.running || this.ended || this.pendingNextLevel) return;
-    if (this.paused && this.portraitRequired) {
-      this.showPortraitAlert();
-      return;
-    }
+    if (this.paused && this.portraitRequired) return;
 
     this.paused = !this.paused;
     this.keys.ArrowLeft = false;

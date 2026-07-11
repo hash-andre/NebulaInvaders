@@ -13,7 +13,7 @@
   <title>Nebula Invaders</title>
 </head>
 <body>
-  <main class="page-shell">
+  <main class="page-shell" id="page-shell">
     <header class="hero">
       <p class="eyebrow">Incoming transmission · sector 09</p>
       <h1>NEBULA <span>INVADERS</span></h1>
@@ -58,6 +58,15 @@
 
     <p class="tip"><span>Pro tip</span> The UFO is worth 500 points, and each remaining life is worth 1,000.</p>
   </main>
-  <script src="script.js?v=20260711-11"></script>
+
+  <div class="orientation-alert" id="orientation-alert" role="alert" aria-live="assertive" aria-hidden="true">
+    <div class="orientation-alert-card">
+      <p class="panel-kicker">Orientation locked</p>
+      <h2>Rotate your device</h2>
+      <p>Please return to portrait mode to continue playing.</p>
+    </div>
+  </div>
+
+  <script src="script.js?v=20260711-12"></script>
 </body>
 </html>
