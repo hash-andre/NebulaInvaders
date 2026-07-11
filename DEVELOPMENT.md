@@ -54,6 +54,13 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Qualità fondali senza costo nel game loop
+
+- Rigenerati i tre fondali WebP dagli originali PNG a qualità 94, mantenendo la risoluzione 1080×720 e un peso complessivo contenuto.
+- Spostato il rendering visivo dei fondali dal buffer Canvas 720×480 al layer CSS, evitando l'ingrandimento del bitmap logico sugli schermi desktop.
+- Eliminata la chiamata `drawImage()` eseguita a ogni frame; il precaching resta attivo, quindi il miglioramento visivo non aggiunge lavoro al game loop.
+- Impostati centratura, `cover` e assenza di ripetizione per preservare la composizione su ogni formato.
+
 ### Overlay di rotazione e spaziatura mobile
 
 - Sostituito l'alert nativo con un overlay accessibile gestito dalla pagina, così può chiudersi automaticamente al ritorno in portrait.

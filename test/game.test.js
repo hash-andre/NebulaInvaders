@@ -101,6 +101,15 @@ test("campaign defines unique backgrounds and bosses for every level", () => {
   });
 });
 
+test("level backgrounds render through CSS instead of the low-resolution canvas buffer", () => {
+  const script = fs.readFileSync(path.join(__dirname, "..", "script.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "..", "style.css"), "utf8");
+
+  assert.doesNotMatch(script, /drawImage\(this\.background/);
+  assert.match(css, /background-size: cover/);
+  assert.match(css, /background-position: center/);
+});
+
 test("new campaign creates the first fleet and initializes the HUD", () => {
   const { game, canvas, ui } = createGame();
   const firstLevel = LEVELS[0];

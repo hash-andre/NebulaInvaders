@@ -520,7 +520,6 @@ class Game {
     this.bindControls = options.bindControls !== false;
     this.ui = options.ui || this.findUi();
     this.backgrounds = this.preloadBackgrounds();
-    this.background = null;
 
     if (this.bindControls) {
       this.setupControls();
@@ -572,8 +571,6 @@ class Game {
 
   loadLevel() {
     const level = LEVELS[this.levelIndex];
-
-    this.background = this.backgrounds.get(level.background) || null;
 
     if (this.canvas.style) {
       this.canvas.style.backgroundImage = `url("${level.background}")`;
@@ -1064,12 +1061,6 @@ class Game {
   draw() {
     const context = this.ctx;
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    if (this.background?.complete && this.background.naturalWidth) {
-      context.globalAlpha = 0.7;
-      context.drawImage(this.background, 0, 0, this.canvas.width, this.canvas.height);
-      context.globalAlpha = 1;
-    }
 
     const gradient = context.createLinearGradient(0, 0, 0, this.canvas.height);
     gradient.addColorStop(0, "rgba(2,3,12,.08)");
