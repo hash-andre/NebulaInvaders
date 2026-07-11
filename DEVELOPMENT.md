@@ -16,7 +16,7 @@ Definisce:
 - HUD per punteggio, vite e stato della missione;
 - elemento `<canvas>`;
 - pannello iniziale e pannello di fine partita;
-- pulsanti per retry, audio e tema.
+- pulsanti per avvio/ripresa, pausa e audio.
 
 ### `style.css`
 
@@ -24,7 +24,7 @@ Gestisce:
 
 - layout centrato e responsive;
 - aspetto arcade dell'interfaccia;
-- temi chiaro e scuro tramite l'attributo `data-theme`;
+- identità visiva arcade scura;
 - adattamento dei controlli agli schermi piccoli;
 - sfondo del Canvas e stati visivi dei pulsanti.
 
@@ -36,6 +36,7 @@ Contiene le seguenti classi:
 - `Player`: rappresenta e disegna la navicella.
 - `Invader`: rappresenta e anima un alieno.
 - `Bullet`: gestisce proiettili del giocatore e degli alieni.
+- `Explosion` e `BossExplosion`: gestiscono gli impatti particellari e la distruzione finale dei boss.
 - `Game`: coordina stato, input, collisioni, punteggio, vite, UFO e rendering.
 
 Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti dipendono dal delta temporale, così movimento e velocità non sono legati al refresh rate dello schermo.
@@ -45,7 +46,7 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 | Tecnologia | Utilizzo | Motivo |
 | --- | --- | --- |
 | HTML5 | Struttura e controlli | Semantica e accessibilità native |
-| CSS3 | Layout, temi e responsive design | Nessuna dipendenza e caricamento leggero |
+| CSS3 | Layout e responsive design | Nessuna dipendenza e caricamento leggero |
 | JavaScript ES6 | Logica a oggetti | Supporto browser ampio e codice organizzato |
 | Canvas 2D | Rendering del gioco | Adatto a sprite semplici e animazioni continue |
 | Web Audio API | Effetti sonori sintetizzati | Evita asset audio e richieste di rete aggiuntive |
@@ -60,6 +61,15 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 - Creato un effetto sonoro dedicato alla distruzione degli invasori e separato dal suono di danno del giocatore.
 - Introdotta una fanfara specifica, ritardata rispetto all'esplosione del boss finale, per rendere riconoscibile il completamento dell'intera campagna.
 - Aggiunti test automatici per vibrazione, particelle, relativo ciclo di vita e identità dei nuovi feedback sonori.
+
+### Pausa, collisioni estese e interfaccia inglese
+
+- Estese le animazioni di collisione alla navicella, all'UFO bonus e ai colpi sul boss; la distruzione completa del boss usa un effetto dedicato con più particelle, onde concentriche e flash centrale.
+- Aggiunta la pausa tramite pulsante condiviso da desktop e mobile; su desktop `Esc` alterna pausa/ripresa ed `Enter` avvia il livello successivo.
+- Tradotti in inglese metadati, testi, suggerimenti ed etichette accessibili dell'interfaccia.
+- Rimossi tema chiaro, relativo toggle e codice JavaScript/CSS associato per mantenere un'identità arcade unicamente scura.
+- Ridimensionata la card in base all'altezza disponibile sui dispositivi touch in landscape, con un massimo di 480 px e un minimo utilizzabile di 320 px.
+- Rimossi i vecchi fondali PNG non più referenziati; il gioco conserva soltanto le versioni WebP precaricate.
 
 ### Precaricamento fondali, boss adattivi e rotazione touch
 

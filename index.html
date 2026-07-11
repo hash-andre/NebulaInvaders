@@ -1,28 +1,24 @@
 <!DOCTYPE html>
-<html lang="it" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Nebula Invaders, un piccolo arcade spaziale">
+  <meta name="description" content="Nebula Invaders, a compact space arcade game">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260711-6">
+  <link rel="stylesheet" href="style.css?v=20260711-7">
   <title>Nebula Invaders</title>
 </head>
 <body>
-  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Passa al tema chiaro" aria-pressed="false">
-    <span class="theme-indicator" aria-hidden="true"></span><span class="theme-label">Light mode</span>
-  </button>
-
   <main class="page-shell">
     <header class="hero">
       <p class="eyebrow">Incoming transmission · sector 09</p>
       <h1>NEBULA <span>INVADERS</span></h1>
-      <p class="intro">Difendi l'orbita. Abbatti la flotta. Cattura l'UFO.</p>
+      <p class="intro">Defend the orbit. Destroy the fleet. Catch the UFO.</p>
     </header>
 
-    <section class="game-card" aria-label="Nebula Invaders">
+    <section class="game-card" aria-label="Nebula Invaders game">
       <div class="hud" aria-live="polite">
         <div><span class="hud-label">Score</span><strong id="score">00000</strong><span class="hud-level" id="level">Level 1/3</span></div>
         <div class="hud-center"><span class="status-dot"></span><span id="status">Mission active</span></div>
@@ -30,34 +26,36 @@
       </div>
 
       <div class="canvas-wrap">
-        <canvas id="game" width="720" height="480" tabindex="0" aria-label="Area di gioco"></canvas>
+        <canvas id="game" width="720" height="480" tabindex="0" aria-label="Game area"></canvas>
         <div class="start-panel" id="start-panel">
           <p class="panel-kicker" id="panel-kicker">Sector 09</p>
           <h2 id="panel-title">Ready, pilot?</h2>
-          <p id="panel-copy">Gli invasori si stanno avvicinando.</p>
+          <p id="panel-copy">The invaders are approaching.</p>
           <button class="primary-button" id="action-button" type="button">Start mission</button>
         </div>
       </div>
 
       <div class="controls-bar">
-        <div class="keyboard-help" aria-label="Comandi da tastiera">
+        <div class="keyboard-help" aria-label="Keyboard controls">
           <p><kbd>←</kbd><kbd>→</kbd><span>Move</span></p>
           <p><kbd>Space</kbd><span>Fire</span></p>
+          <p><kbd>Esc</kbd><span>Pause</span></p>
         </div>
-        <button class="sound-button" id="sound-toggle" type="button" aria-label="Disattiva suoni" aria-pressed="true">♪ <span>Sound on</span></button>
+        <button class="pause-button" id="pause-toggle" type="button" aria-label="Pause game" aria-pressed="false">Ⅱ <span>Pause</span></button>
+        <button class="sound-button" id="sound-toggle" type="button" aria-label="Disable sound" aria-pressed="true">♪ <span>Sound on</span></button>
       </div>
 
-      <div class="touch-controls" aria-label="Comandi di gioco touch">
-        <div class="move-controls" role="group" aria-label="Movimento">
-          <button class="touch-button" type="button" data-control="left" aria-label="Muovi a sinistra"><span aria-hidden="true">←</span></button>
-          <button class="touch-button" type="button" data-control="right" aria-label="Muovi a destra"><span aria-hidden="true">→</span></button>
+      <div class="touch-controls" aria-label="Touch controls">
+        <div class="move-controls" role="group" aria-label="Movement">
+          <button class="touch-button" type="button" data-control="left" aria-label="Move left"><span aria-hidden="true">←</span></button>
+          <button class="touch-button" type="button" data-control="right" aria-label="Move right"><span aria-hidden="true">→</span></button>
         </div>
-        <button class="touch-button fire-button" type="button" data-control="fire" aria-label="Spara"><span aria-hidden="true">●</span><small>Fire</small></button>
+        <button class="touch-button fire-button" type="button" data-control="fire" aria-label="Fire"><span aria-hidden="true">●</span><small>Fire</small></button>
       </div>
     </section>
 
-    <p class="tip"><span>Pro tip</span> L'UFO vale 500 punti e ogni vita rimasta vale 1.000 punti.</p>
+    <p class="tip"><span>Pro tip</span> The UFO is worth 500 points, and each remaining life is worth 1,000.</p>
   </main>
-  <script src="script.js?v=20260711-9"></script>
+  <script src="script.js?v=20260711-10"></script>
 </body>
 </html>

@@ -8,6 +8,8 @@ Open `index.html` in a modern browser and select **Start mission**.
 
 - Use `←` and `→` to move.
 - Press `Space` to fire.
+- Press `Esc` or use the pause button to pause and resume.
+- Press `Enter` to start an unlocked next level.
 - On phones and tablets, use the on-screen movement and fire controls.
 - Destroy the fleet before it reaches the player.
 - Avoid enemy projectiles; the campaign starts with three lives.
@@ -37,7 +39,7 @@ Every level uses its own generated, preloaded WebP space background. The backgro
 - Golden UFO bonus encounters.
 - Victory bonus based on remaining lives.
 - Web Audio sound effects with an audio toggle.
-- Light and dark interface themes.
+- A focused dark arcade interface.
 - Responsive canvas and HUD for small phones, tablets, desktops, and large displays.
 - Touch controls built with Pointer Events and safe-area support.
 - Keyboard hints with vertically centered `<kbd>` content.
@@ -72,8 +74,7 @@ The tests use Node's built-in test runner, so `npm install` is not required.
 ├── assets/
 │   ├── level-1-background.webp
 │   ├── level-2-background.webp
-│   ├── level-3-background.webp
-│   └── space-background.png
+│   └── level-3-background.webp
 ├── test/
 │   └── game.test.js
 ├── DEVELOPMENT.md
@@ -87,7 +88,7 @@ The tests use Node's built-in test runner, so `npm install` is not required.
 ## Technology
 
 - HTML5 for semantic structure and accessible controls.
-- CSS3 for themes, responsive layout, safe areas, and touch feedback.
+- CSS3 for responsive layout, safe areas, and touch feedback.
 - JavaScript for campaign state, entities, input, collision detection, and the game loop.
 - Canvas 2D for rendering gameplay.
 - Web Audio API for generated sound effects.

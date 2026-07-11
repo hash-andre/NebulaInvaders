@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { LEVELS, Bullet, Game } = require("../script.js");
+const { LEVELS, Bullet, Explosion, BossExplosion, Game } = require("../script.js");
 
 function createClassList() {
   const values = new Set();
@@ -15,9 +15,13 @@ function createClassList() {
 }
 
 function createElement() {
+  const attributes = new Map();
   return {
     textContent: "",
+    innerHTML: "",
     classList: createClassList(),
+    setAttribute: (name, value) => attributes.set(name, value),
+    getAttribute: (name) => attributes.get(name),
   };
 }
 
@@ -32,6 +36,7 @@ function createUi() {
     title: createElement(),
     copy: createElement(),
     action: createElement(),
+    pause: createElement(),
   };
 }
 
@@ -128,6 +133,7 @@ test("shooting and taking damage use distinct haptic feedback", () => {
   game.enemyBullets = [new Bullet(game.player.x, game.player.y, 0, true)];
   game.collisions();
   assert.deepEqual(vibrations, [12, [45, 35, 80]]);
+  assert.ok(game.effects.some((effect) => effect instanceof Explosion));
 });
 
 test("destroying an invader creates an explosion and a dedicated sound", () => {
@@ -141,6 +147,53 @@ test("destroying an invader creates an explosion and a dedicated sound", () => {
   assert.deepEqual(audio.calls.at(-1), ["enemyDefeat", invader.row]);
   game.updateEffects(0.5);
   assert.equal(game.effects.length, 0);
+});
+
+test("the bonus UFO and boss collisions create distinct visual effects", () => {
+  const { game } = createGame();
+  game.ufo = { x: 100, y: 25, width: 48, height: 19, speed: 0 };
+  game.bullets = [new Bullet(110, 30, 0)];
+  game.collisions();
+  assert.equal(game.effects.length, 1);
+  assert.ok(game.effects[0] instanceof Explosion);
+
+  game.spawnBoss();
+  game.boss.health = 1;
+  game.bullets = [new Bullet(game.boss.x + 10, game.boss.y + 10, 0)];
+  game.collisions();
+  assert.ok(game.effects.some((effect) => effect instanceof BossExplosion));
+});
+
+test("Escape pauses and resumes the active game without advancing it", () => {
+  const { game, ui } = createGame();
+  game.running = true;
+  const event = { code: "Escape", repeat: false, preventDefault() {} };
+  game.handleKeyDown(event);
+
+  assert.equal(game.paused, true);
+  assert.equal(ui.panel.classList.contains("hidden"), false);
+  assert.equal(ui.pause.getAttribute("aria-pressed"), "true");
+  const firstInvaderX = game.invaders[0].x;
+  const bulletCount = game.bullets.length;
+  game.shoot();
+  game.update(0.25);
+  assert.equal(game.invaders[0].x, firstInvaderX);
+  assert.equal(game.bullets.length, bulletCount);
+
+  game.handleKeyDown(event);
+  assert.equal(game.paused, false);
+  assert.equal(ui.panel.classList.contains("hidden"), true);
+});
+
+test("Enter starts the next unlocked level", () => {
+  const { game } = createGame();
+  game.running = false;
+  game.pendingNextLevel = true;
+  game.handleKeyDown({ code: "Enter", repeat: false, preventDefault() {} });
+
+  assert.equal(game.levelIndex, 1);
+  assert.equal(game.running, true);
+  assert.equal(game.pendingNextLevel, false);
 });
 
 test("clearing a fleet starts that level's boss phase", () => {

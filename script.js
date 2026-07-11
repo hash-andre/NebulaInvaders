@@ -257,14 +257,17 @@ class Invader {
 }
 
 class Explosion {
-  constructor(x, y, color, random = Math.random) {
+  constructor(x, y, color, random = Math.random, options = {}) {
     this.x = x;
     this.y = y;
+    this.color = color;
     this.age = 0;
-    this.duration = 0.48;
-    this.particles = Array.from({ length: 14 }, (_, index) => {
-      const angle = (Math.PI * 2 * index) / 14 + (random() - 0.5) * 0.3;
-      const speed = 45 + random() * 95;
+    this.duration = options.duration || 0.48;
+    const particleCount = options.particleCount || 14;
+    const power = options.power || 1;
+    this.particles = Array.from({ length: particleCount }, (_, index) => {
+      const angle = (Math.PI * 2 * index) / particleCount + (random() - 0.5) * 0.3;
+      const speed = (45 + random() * 95) * power;
       return {
         x: 0,
         y: 0,
@@ -305,6 +308,35 @@ class Explosion {
 
   get finished() {
     return this.age >= this.duration;
+  }
+}
+
+class BossExplosion extends Explosion {
+  constructor(x, y, color, random = Math.random) {
+    super(x, y, color, random, { duration: 1.05, particleCount: 42, power: 1.8 });
+  }
+
+  draw(context) {
+    super.draw(context);
+    const progress = Math.min(1, this.age / this.duration);
+    context.save();
+    context.translate(this.x, this.y);
+    context.globalCompositeOperation = "lighter";
+    context.globalAlpha = 1 - progress;
+    context.strokeStyle = this.color;
+    context.shadowBlur = 24;
+    context.shadowColor = this.color;
+    context.lineWidth = 5 * (1 - progress) + 1;
+    [0.72, 1].forEach((scale) => {
+      context.beginPath();
+      context.arc(0, 0, 12 + progress * 100 * scale, 0, Math.PI * 2);
+      context.stroke();
+    });
+    context.fillStyle = "#ffffff";
+    context.beginPath();
+    context.arc(0, 0, Math.max(0, 22 * (1 - progress * 1.4)), 0, Math.PI * 2);
+    context.fill();
+    context.restore();
   }
 }
 
@@ -478,6 +510,7 @@ class Game {
     });
     this.keys = {};
     this.running = false;
+    this.paused = false;
     this.lastTime = 0;
     this.bindControls = options.bindControls !== false;
     this.ui = options.ui || this.findUi();
@@ -502,6 +535,7 @@ class Game {
       title: document.querySelector("#panel-title"),
       copy: document.querySelector("#panel-copy"),
       action: document.querySelector("#action-button"),
+      pause: document.querySelector("#pause-toggle"),
     };
   }
 
@@ -525,6 +559,7 @@ class Game {
     this.levelIndex = 0;
     this.ended = false;
     this.pendingNextLevel = false;
+    this.paused = false;
     this.loadLevel();
   }
 
@@ -569,18 +604,8 @@ class Game {
   }
 
   setupControls() {
-    addEventListener("keydown", (event) => {
-      if (["ArrowLeft", "ArrowRight", "Space"].includes(event.code)) {
-        event.preventDefault();
-      }
-
-      this.keys[event.code] = true;
-      if (event.code === "Space" && !event.repeat) this.shoot();
-    });
-
-    addEventListener("keyup", (event) => {
-      this.keys[event.code] = false;
-    });
+    addEventListener("keydown", (event) => this.handleKeyDown(event));
+    addEventListener("keyup", (event) => this.handleKeyUp(event));
 
     document.querySelectorAll("[data-control]").forEach((button) => {
       const control = button.dataset.control;
@@ -633,11 +658,45 @@ class Game {
     addEventListener("orientationchange", scheduleViewportSync, { passive: true });
     window.visualViewport?.addEventListener("resize", scheduleViewportSync, { passive: true });
     this.ui.action.addEventListener("click", () => this.start());
+    this.ui.pause.addEventListener("click", () => this.togglePause());
     syncViewport();
+  }
+
+  handleKeyDown(event) {
+    if (["ArrowLeft", "ArrowRight", "Space", "Escape", "Enter"].includes(event.code)) {
+      event.preventDefault();
+    }
+
+    if (event.code === "Escape" && !event.repeat) {
+      this.togglePause();
+      return;
+    }
+
+    if (event.code === "Enter" && !event.repeat
+      && (this.paused || this.pendingNextLevel || (!this.running && !this.ended))) {
+      this.start();
+      return;
+    }
+
+    this.keys[event.code] = true;
+    if (event.code === "Space" && !event.repeat) this.shoot();
+  }
+
+  handleKeyUp(event) {
+    this.keys[event.code] = false;
   }
 
   start() {
     this.audio.init();
+
+    if (this.paused) {
+      this.paused = false;
+      this.ui.panel.classList.add("hidden");
+      this.ui.status.textContent = "Mission active";
+      this.updatePauseControl();
+      this.canvas.focus();
+      return;
+    }
 
     if (this.ended) {
       this.resetCampaign();
@@ -648,13 +707,43 @@ class Game {
     }
 
     this.running = true;
+    this.paused = false;
     this.ui.panel.classList.add("hidden");
     this.ui.status.textContent = "Mission active";
+    this.updatePauseControl();
     this.canvas.focus();
   }
 
+  togglePause() {
+    if (!this.running || this.ended || this.pendingNextLevel) return;
+
+    this.paused = !this.paused;
+    this.keys.ArrowLeft = false;
+    this.keys.ArrowRight = false;
+    if (this.paused) {
+      this.ui.kicker.textContent = "Mission suspended";
+      this.ui.title.textContent = "Game paused";
+      this.ui.copy.textContent = "Press ESC, Enter, or Resume when you are ready.";
+      this.ui.action.textContent = "Resume";
+      this.ui.status.textContent = "Paused";
+      this.ui.panel.classList.remove("hidden");
+    } else {
+      this.ui.panel.classList.add("hidden");
+      this.ui.status.textContent = "Mission active";
+      this.canvas.focus();
+    }
+    this.updatePauseControl();
+  }
+
+  updatePauseControl() {
+    if (!this.ui.pause) return;
+    this.ui.pause.setAttribute("aria-pressed", String(this.paused));
+    this.ui.pause.setAttribute("aria-label", this.paused ? "Resume game" : "Pause game");
+    this.ui.pause.innerHTML = this.paused ? "▶ <span>Resume</span>" : "Ⅱ <span>Pause</span>";
+  }
+
   shoot() {
-    if (!this.running || this.shootCooldown > 0) return;
+    if (!this.running || this.paused || this.shootCooldown > 0) return;
 
     this.bullets.push(new Bullet(this.player.x + 21, this.player.y - 9, -350));
     this.shootCooldown = 0.3;
@@ -663,11 +752,12 @@ class Game {
   }
 
   update(deltaTime) {
+    if (this.paused) return;
+    this.updateEffects(deltaTime);
     if (!this.running) return;
 
     this.updatePlayer(deltaTime);
     this.updateBullets(deltaTime);
-    this.updateEffects(deltaTime);
 
     if (this.phase === "fleet") this.updateFleet(deltaTime);
     else this.updateBoss(deltaTime);
@@ -799,6 +889,11 @@ class Game {
   collisions() {
     this.bullets = this.bullets.filter((bullet) => {
       if (this.phase === "boss" && this.boss && this.hit(bullet, this.boss)) {
+        this.effects.push(new Explosion(bullet.x, bullet.y, this.boss.color, this.random, {
+          duration: 0.3,
+          particleCount: 8,
+          power: 0.65,
+        }));
         this.damageBoss();
         return false;
       }
@@ -821,6 +916,13 @@ class Game {
       }
 
       if (this.ufo && this.hit(bullet, this.ufo)) {
+        this.effects.push(new Explosion(
+          this.ufo.x + this.ufo.width / 2,
+          this.ufo.y + this.ufo.height / 2,
+          "#ffd95a",
+          this.random,
+          { duration: 0.65, particleCount: 24, power: 1.25 },
+        ));
         this.score += 500;
         this.ufo = null;
         this.ufoTimer = 9;
@@ -835,6 +937,13 @@ class Game {
     this.enemyBullets = this.enemyBullets.filter((bullet) => {
       if (!this.hit(bullet, this.player)) return true;
 
+      this.effects.push(new Explosion(
+        this.player.x + this.player.width / 2,
+        this.player.y + this.player.height / 2,
+        "#55ecff",
+        this.random,
+        { duration: 0.7, particleCount: 26, power: 1.35 },
+      ));
       this.lives -= 1;
       this.audio.hit();
       this.vibrate([45, 35, 80]);
@@ -849,6 +958,13 @@ class Game {
     this.boss.health -= 1;
 
     if (this.boss.health <= 0) {
+      const defeatedBoss = this.boss;
+      this.effects.push(new BossExplosion(
+        defeatedBoss.x + defeatedBoss.width / 2,
+        defeatedBoss.y + defeatedBoss.height / 2,
+        defeatedBoss.color,
+        this.random,
+      ));
       this.audio.bossDefeat(this.levelIndex);
       this.score += this.boss.score;
       this.boss = null;
@@ -872,7 +988,7 @@ class Game {
     this.enemyBullets = [];
     this.ui.kicker.textContent = `Level ${this.levelIndex + 1} cleared`;
     this.ui.title.textContent = "Boss destroyed";
-    this.ui.copy.textContent = `${LEVELS[this.levelIndex + 1].name} is waiting. Score: ${this.score}`;
+    this.ui.copy.textContent = `${LEVELS[this.levelIndex + 1].name} is waiting. Score: ${this.score}. Press Enter to continue.`;
     this.ui.action.textContent = "Next level";
     this.ui.status.textContent = "Sector secure";
     this.ui.panel.classList.remove("hidden");
@@ -998,17 +1114,10 @@ function bootstrap() {
     this.innerHTML = game.audio.enabled ? "♪ <span>Sound on</span>" : "× <span>Sound off</span>";
   });
 
-  document.querySelector("#theme-toggle").addEventListener("click", function toggleTheme() {
-    const light = document.documentElement.dataset.theme !== "light";
-    document.documentElement.dataset.theme = light ? "light" : "dark";
-    this.setAttribute("aria-pressed", String(light));
-    this.setAttribute("aria-label", light ? "Use dark theme" : "Use light theme");
-    this.querySelector(".theme-label").textContent = light ? "Dark mode" : "Light mode";
-  });
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { LEVELS, AudioEngine, Bullet, Player, Invader, Explosion, Boss, Game };
+  module.exports = { LEVELS, AudioEngine, Bullet, Player, Invader, Explosion, BossExplosion, Boss, Game };
 }
 
 if (typeof document !== "undefined") {
