@@ -54,6 +54,11 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Distribuzione uniforme HUD mobile
+
+- Portato l'HUD mobile a tre colonne della stessa larghezza per distribuire score, stato della missione e vite come nella versione desktop.
+- Mantenuti gli allineamenti sinistra, centro e destra, riducendo gli spazi interni e impedendo ai contenuti di andare a capo.
+
 ### Qualità fondali senza costo nel game loop
 
 - Rigenerati i tre fondali WebP dagli originali PNG a qualità 94, mantenendo la risoluzione 1080×720 e un peso complessivo contenuto.

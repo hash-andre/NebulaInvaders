@@ -239,7 +239,7 @@ test("the page includes an SVG favicon and a single-line mobile HUD", () => {
 
   assert.match(html, /rel="icon" href="assets\/favicon\.svg"/);
   assert.equal(fs.existsSync(path.join(__dirname, "..", "assets", "favicon.svg")), true);
-  assert.match(css, /grid-template-columns: minmax\(0, 1\.55fr\) minmax\(0, \.9fr\) minmax\(0, \.65fr\)/);
+  assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /white-space: nowrap/);
 });
 

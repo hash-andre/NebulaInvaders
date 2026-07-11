@@ -83,12 +83,12 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
   h1 { font-size: clamp(30px, 10vw, 44px); }
   .intro { margin-top: 7px; font-size: 10px; }
   .game-card { border-radius: 14px; }
-  .hud { height: 48px; grid-template-columns: minmax(0, 1.55fr) minmax(0, .9fr) minmax(0, .65fr); gap: 5px; padding: 0 10px; }
-  .hud > div { min-width: 0; gap: 5px; white-space: nowrap; }
+  .hud { height: 48px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 10px; }
+  .hud > div { min-width: 0; gap: 4px; overflow: hidden; white-space: nowrap; }
   .hud-label { font-size: 7px; letter-spacing: .1em; }
   .hud strong { font-size: 15px; letter-spacing: .04em; }
   .hud-level { font-size: 6px; letter-spacing: .03em; }
-  .hud-center { display: flex; justify-content: center; gap: 4px; overflow: hidden; font-size: 7px; letter-spacing: .04em; }
+  .hud-center { display: flex; justify-content: center; font-size: 7px; letter-spacing: .04em; }
   .hud-center span:last-child { overflow: hidden; text-overflow: ellipsis; }
   .status-dot { flex: 0 0 auto; width: 5px; height: 5px; }
   #lives { letter-spacing: .06em; }
