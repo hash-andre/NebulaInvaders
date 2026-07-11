@@ -12,6 +12,7 @@
 }
 
 * { box-sizing: border-box; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap; }
 
 body {
   height: 100vh;
@@ -100,17 +101,20 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
   .controls-bar { min-height: 44px; padding: 5px 10px; }
   .keyboard-help { display: none; }
   .pause-button, .sound-button { min-width: 44px; min-height: 44px; }
-  .touch-controls { display: flex; justify-content: space-between; align-items: center; padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); background: var(--surface); border-top: 1px solid var(--line); touch-action: none; user-select: none; -webkit-user-select: none; }
+  .touch-controls { display: flex; justify-content: space-between; align-items: center; padding: 12px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); background: var(--surface); border-top: 1px solid var(--line); touch-action: pan-y; user-select: none; -webkit-user-select: none; }
   .move-controls { flex: 0 0 auto; display: flex; align-items: center; }
-  .joystick { position: relative; width: clamp(128px, 36vw, 150px); height: 58px; overflow: hidden; color: var(--muted); background: radial-gradient(circle at 50% 45%, rgba(125,125,160,.2), rgba(48,48,78,.14)); border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 999px; touch-action: none; cursor: ew-resize; }
-  .joystick::before { content: ""; position: absolute; top: 12px; bottom: 12px; left: 50%; width: 1px; background: var(--line); }
-  .joystick-direction { position: absolute; top: 50%; z-index: 1; transform: translateY(-52%); font: 700 14px/1 "Chakra Petch", sans-serif; pointer-events: none; }
-  .joystick-left { left: 8px; }
-  .joystick-right { right: 8px; }
-  .joystick-thumb { position: absolute; z-index: 2; top: 50%; left: 50%; width: 44px; height: 44px; display: grid; place-items: center; transform: translate(-50%, -50%); background: radial-gradient(circle at 38% 30%, #bca8ff, #8254ed 42%, #5932b8 100%); border: 1px solid #c9baff; border-radius: 50%; box-shadow: 0 7px 18px rgba(78, 45, 170, .5), inset 0 -4px 8px rgba(31, 15, 75, .35); transition: left .08s ease-out, filter .15s; pointer-events: none; }
-  .joystick-thumb span { width: 13px; height: 13px; background: rgba(255,255,255,.8); border-radius: 50%; box-shadow: 0 0 10px rgba(255,255,255,.45); }
-  .joystick.is-active { border-color: var(--cyan); background: rgba(56,232,255,.1); }
-  .joystick.is-active .joystick-thumb { filter: brightness(1.12); transition: none; }
+  .joystick { position: relative; width: clamp(184px, 54vw, 232px); height: 60px; overflow: hidden; contain: layout paint; color: var(--muted); background: linear-gradient(90deg, rgba(56,232,255,.08), transparent 36%, transparent 64%, rgba(139,92,246,.12)), linear-gradient(180deg, rgba(35,38,66,.96), rgba(15,17,35,.96)); border: 1px solid rgba(147,154,255,.38); border-bottom-width: 3px; border-radius: 17px; box-shadow: inset 0 1px rgba(255,255,255,.05), inset 0 -8px 18px rgba(0,0,0,.22); touch-action: none; cursor: ew-resize; }
+  .joystick::before { content: ""; position: absolute; z-index: 0; top: calc(50% - 2px); right: 22px; left: 22px; height: 4px; background: linear-gradient(90deg, rgba(56,232,255,.38), rgba(151,143,202,.18) 43%, rgba(151,143,202,.18) 57%, rgba(176,119,255,.42)); border-radius: 999px; box-shadow: 0 0 9px rgba(56,232,255,.08); }
+  .joystick::after { content: ""; position: absolute; z-index: 1; top: 10px; bottom: 10px; left: 50%; width: 10px; transform: translateX(-50%); border-right: 1px solid rgba(190,184,231,.3); border-left: 1px solid rgba(190,184,231,.3); pointer-events: none; }
+  .joystick-direction { position: absolute; top: 50%; z-index: 3; transform: translateY(-52%); color: rgba(210,207,229,.58); font: 700 18px/1 "Chakra Petch", sans-serif; transition: color .12s, text-shadow .12s; pointer-events: none; }
+  .joystick-left { left: 16px; }
+  .joystick-right { right: 16px; }
+  .joystick-thumb { position: absolute; z-index: 2; top: 50%; left: 50%; width: 52px; height: 46px; display: grid; place-items: center; transform: translate3d(-50%, -50%, 0); background: linear-gradient(145deg, #aa91ff 0%, #7950de 48%, #4c2c9b 100%); border: 1px solid #cbbdff; border-radius: 13px; box-shadow: 0 4px 7px rgba(22,12,62,.58), inset 0 1px rgba(255,255,255,.38), inset 0 -5px 9px rgba(28,12,73,.42); transition: transform .14s cubic-bezier(.2,.8,.2,1), box-shadow .12s; will-change: transform; pointer-events: none; }
+  .joystick-thumb span { width: 18px; height: 18px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.75) 0 2px, transparent 2px 6px); opacity: .8; }
+  .joystick.is-active { border-color: rgba(56,232,255,.82); box-shadow: 0 0 0 1px rgba(56,232,255,.1), inset 0 1px rgba(255,255,255,.06), inset 0 -8px 18px rgba(0,0,0,.22); }
+  .joystick.is-active .joystick-thumb { box-shadow: 0 4px 8px rgba(32,17,82,.68), 0 0 7px rgba(56,232,255,.2), inset 0 1px rgba(255,255,255,.42), inset 0 -5px 9px rgba(28,12,73,.42); transition-property: box-shadow; }
+  .joystick[data-direction="left"] .joystick-left, .joystick[data-direction="right"] .joystick-right { color: var(--cyan); text-shadow: 0 0 10px rgba(56,232,255,.7); }
+  .joystick:focus-visible { border-color: var(--cyan); outline: 2px solid rgba(56,232,255,.48); outline-offset: 2px; }
   .touch-button { width: clamp(60px, 18vw, 76px); height: 58px; display: inline-flex; align-items: center; justify-content: center; color: var(--text); background: rgba(125,125,160,.12); border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 12px; font: 700 25px "Chakra Petch", sans-serif; touch-action: none; cursor: pointer; }
   .move-controls .touch-button > span { display: block; line-height: 1; transform: translateY(-1px); }
   .touch-button:active, .touch-button.is-active { color: white; border-color: var(--cyan); background: rgba(56,232,255,.2); transform: translateY(1px); }
@@ -137,8 +141,8 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
   .hud strong { font-size: 14px; }
   .hud-level { font-size: 5.5px; }
   .touch-controls { padding-top: 9px; }
-  .joystick { width: clamp(118px, 35vw, 138px); height: 54px; }
-  .joystick-thumb { width: 42px; height: 42px; }
+  .joystick { width: clamp(174px, 52vw, 205px); height: 54px; }
+  .joystick-thumb { width: 46px; height: 42px; }
   .touch-button { width: clamp(54px, 18vw, 66px); height: 54px; }
   .fire-button { width: 68px; }
 }
@@ -150,7 +154,11 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
   .pause-button, .sound-button { min-height: 40px; }
   .touch-controls { padding-top: 6px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   .joystick, .touch-button { height: 48px; }
-  .joystick-thumb { width: 38px; height: 38px; }
+  .joystick-thumb { width: 42px; height: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .joystick-thumb, .joystick-direction { transition: none; }
 }
 
 @media (max-width: 640px) and (orientation: landscape), (pointer: coarse) and (max-width: 1024px) and (orientation: landscape) {

@@ -20,6 +20,7 @@ function createElement() {
     textContent: "",
     innerHTML: "",
     style: {},
+    dataset: {},
     classList: createClassList(),
     setAttribute: (name, value) => attributes.set(name, value),
     getAttribute: (name) => attributes.get(name),
@@ -153,37 +154,175 @@ test("shooting and taking damage use distinct haptic feedback", () => {
   assert.ok(game.effects.some((effect) => effect instanceof Explosion));
 });
 
-test("the mobile arcade joystick switches both directions at full speed and springs to center", () => {
+test("the mobile joystick provides proportional movement and springs to center", () => {
   const { game } = createGame();
   game.joystick = createElement();
   game.joystickThumb = createElement();
+  game.joystickGeometry = { centerX: 100, travel: 70 };
   const startX = game.player.x;
 
   game.setJoystickValue(-0.8);
-  assert.equal(game.touchAxis, -1);
-  assert.equal(game.joystickThumb.style.left, "18%");
-  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Left");
+  assert.ok(Math.abs(game.touchAxis - (-0.68 / 0.88)) < 0.0001);
+  assert.match(game.joystickThumb.style.transform, /-56\.00px/);
+  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Left 77%");
   game.updatePlayer(1 / 60);
-  assert.equal(game.player.x, startX - game.player.speed, "binary input must use full player speed");
+  assert.ok(game.player.x < startX);
+  assert.ok(game.player.x > startX - game.player.speed, "partial travel must stay below full speed");
 
   game.setJoystickValue(0.75);
-  assert.equal(game.touchAxis, 1);
-  assert.equal(game.joystickThumb.style.left, "82%");
-  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Right");
+  assert.ok(Math.abs(game.touchAxis - (0.63 / 0.88)) < 0.0001);
+  assert.match(game.joystickThumb.style.transform, /52\.50px/);
+  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Right 72%");
 
   game.setJoystickValue(0.1);
-  assert.equal(game.touchAxis, 0, "the center dead zone must switch movement off");
+  assert.equal(game.touchAxis, 0, "the center dead zone must remain stable");
 
   game.resetJoystick();
   assert.equal(game.touchAxis, 0);
-  assert.equal(game.joystickThumb.style.left, "50%");
+  assert.match(game.joystickThumb.style.transform, /0\.00px/);
   assert.equal(game.joystick.getAttribute("aria-valuetext"), "Centered");
 });
 
-test("mobile markup uses one horizontal joystick instead of two direction buttons", () => {
+test("a burst of touch samples measures layout once and renders only the latest sample", () => {
+  const frames = [];
+  const { game } = createGame({
+    requestFrame: (callback) => frames.push(callback),
+  });
+  const joystick = createElement();
+  const thumb = createElement();
+  const listeners = new Map();
+  let layoutReads = 0;
+  let styleWrites = 0;
+  let capturedPointer = null;
+  let releasedPointer = null;
+  let ariaWrites = 0;
+  thumb.style = new Proxy({}, {
+    set(target, property, value) {
+      styleWrites += 1;
+      target[property] = value;
+      return true;
+    },
+  });
+  joystick.getBoundingClientRect = () => {
+    layoutReads += 1;
+    return { left: 100, width: 200 };
+  };
+  joystick.setPointerCapture = (pointerId) => { capturedPointer = pointerId; };
+  joystick.hasPointerCapture = (pointerId) => capturedPointer === pointerId;
+  joystick.releasePointerCapture = (pointerId) => {
+    releasedPointer = pointerId;
+    capturedPointer = null;
+  };
+  joystick.querySelector = () => thumb;
+  joystick.addEventListener = (type, listener) => {
+    if (!listeners.has(type)) listeners.set(type, []);
+    listeners.get(type).push(listener);
+  };
+  const setAttribute = joystick.setAttribute;
+  joystick.setAttribute = (name, value) => {
+    ariaWrites += 1;
+    setAttribute(name, value);
+  };
+  game.bindJoystickControls(joystick);
+
+  const pointerEvent = (clientX, pointerId = 7) => ({
+    clientX,
+    pointerId,
+    preventDefault() {},
+  });
+  const emit = (type, event) => listeners.get(type).forEach((listener) => listener(event));
+
+  emit("pointerdown", pointerEvent(200));
+  assert.equal(game.touchAxis, 0, "the measured center must map to neutral");
+  emit("pointermove", pointerEvent(130));
+  assert.equal(game.touchAxis, -1, "the cached left edge must map to full speed");
+  for (let index = 0; index < 240; index += 1) {
+    emit("pointermove", pointerEvent(130 + (140 * index) / 239));
+  }
+  emit("pointermove", pointerEvent(100, 8));
+  emit("pointerup", pointerEvent(270, 8));
+
+  assert.equal(layoutReads, 1, "geometry must be cached for the whole gesture");
+  assert.equal(frames.length, 1, "visual work must be coalesced into one animation frame");
+  assert.equal(styleWrites, 0, "pointer events must not write any style before the animation frame");
+  assert.deepEqual({ ...thumb.style }, {});
+  assert.equal(capturedPointer, 7);
+  assert.equal(game.joystickPointer, 7, "a foreign pointer must not end the gesture");
+  assert.ok(game.touchAxis > 0.99, "gameplay input must use the latest sample immediately");
+
+  frames.shift()();
+  assert.match(thumb.style.transform, /70\.00px/);
+  assert.equal(styleWrites, 1);
+  assert.equal(ariaWrites, 2, "ARIA state must be written once for the rendered sample");
+  assert.equal(joystick.dataset.direction, "right");
+
+  for (let index = 0; index < 120; index += 1) emit("pointermove", pointerEvent(270));
+  assert.equal(frames.length, 1, "coalescing must resume for the next display frame");
+  assert.equal(styleWrites, 1);
+  frames.shift()();
+  assert.equal(styleWrites, 2);
+  assert.equal(ariaWrites, 2, "unchanged ARIA state must not be rewritten on later frames");
+
+  emit("pointerup", pointerEvent(270));
+  assert.equal(game.touchAxis, 0);
+  assert.equal(releasedPointer, 7);
+  assert.equal(capturedPointer, null);
+  assert.equal(joystick.classList.contains("is-active"), false);
+  assert.equal(frames.length, 1);
+  frames.shift()();
+  assert.match(thumb.style.transform, /0\.00px/);
+
+  emit("lostpointercapture", pointerEvent(270));
+  assert.equal(frames.length, 0, "lost capture after release must not reset twice");
+
+  emit("pointerdown", pointerEvent(130));
+  emit("pointercancel", pointerEvent(130));
+  assert.equal(frames.length, 1, "a quick cancel must reuse the pending visual frame");
+  frames.shift()();
+  assert.equal(game.touchAxis, 0);
+  assert.match(thumb.style.transform, /0\.00px/, "a pending frame must render the latest neutral state");
+  assert.equal(layoutReads, 2);
+});
+
+test("joystick keyboard controls preserve the direction that is still held", () => {
+  const { game } = createGame();
+  game.joystick = createElement();
+  game.joystickThumb = createElement();
+  game.joystick.getBoundingClientRect = () => ({ left: 0, width: 200 });
+  const keyEvent = (code) => {
+    const state = { prevented: false, stopped: false };
+    return {
+      code,
+      state,
+      preventDefault: () => { state.prevented = true; },
+      stopPropagation: () => { state.stopped = true; },
+    };
+  };
+
+  const leftDown = keyEvent("ArrowLeft");
+  game.handleJoystickKeyDown(leftDown);
+  assert.equal(game.touchAxis, -1);
+  assert.deepEqual(leftDown.state, { prevented: true, stopped: true });
+
+  game.handleJoystickKeyDown(keyEvent("ArrowRight"));
+  assert.equal(game.touchAxis, 1, "the most recent direction must win");
+  game.handleJoystickKeyUp(keyEvent("ArrowLeft"));
+  assert.equal(game.touchAxis, 1, "releasing left must preserve a held right key");
+  game.handleJoystickKeyUp(keyEvent("ArrowRight"));
+  assert.equal(game.touchAxis, 0);
+  assert.equal(game.joystick.classList.contains("is-active"), false);
+});
+
+test("mobile markup exposes an accessible analog joystick without layout animation", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-  assert.match(html, /id="move-joystick" role="slider"/);
+  const css = fs.readFileSync(path.join(__dirname, "..", "style.css"), "utf8");
+  const script = fs.readFileSync(path.join(__dirname, "..", "script.js"), "utf8");
+  assert.match(html, /id="move-joystick" role="slider" tabindex="0" data-direction="center"/);
+  assert.match(html, /aria-describedby="move-joystick-help" aria-orientation="horizontal"/);
   assert.doesNotMatch(html, /data-control="(?:left|right)"/);
+  assert.match(css, /will-change: transform/);
+  assert.doesNotMatch(css, /transition: left/);
+  assert.doesNotMatch(script, /joystickThumb\.style\.left/);
 });
 
 test("destroying an invader creates an explosion and a dedicated sound", () => {
@@ -476,5 +615,6 @@ test("viewport synchronization no longer uses a delayed timeout", () => {
   const viewportSection = source.slice(source.indexOf("const syncViewport"), source.indexOf("this.ui.action"));
 
   assert.match(viewportSection, /requestAnimationFrame\(syncViewport\)/);
+  assert.match(viewportSection, /landscape !== previousLandscape \|\| \(previousWidth !== null && innerWidth !== previousWidth\)/);
   assert.doesNotMatch(viewportSection, /setTimeout/);
 });

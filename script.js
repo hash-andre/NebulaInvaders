@@ -65,6 +65,8 @@ const LEVELS = [
 ];
 
 const INVADER_COLORS = ["#ff70d2", "#a77aff", "#54e8ff", "#ffd95a"];
+const JOYSTICK_DEAD_ZONE = 0.12;
+const JOYSTICK_TRAVEL_RATIO = 0.35;
 
 class AudioEngine {
   constructor() {
@@ -622,6 +624,17 @@ class Game {
     this.touchAxis = 0;
     this.joystick = null;
     this.joystickThumb = null;
+    this.joystickPointer = null;
+    this.joystickGeometry = null;
+    this.joystickVisualValue = 0;
+    this.joystickRenderPending = false;
+    this.joystickAriaValue = null;
+    this.joystickAriaText = null;
+    this.joystickDirection = null;
+    this.joystickKeys = new Set();
+    this.requestFrame = options.requestFrame || ((callback) => (
+      typeof requestAnimationFrame === "function" ? requestAnimationFrame(callback) : callback()
+    ));
     this.running = false;
     this.paused = false;
     this.lastTime = 0;
@@ -697,7 +710,7 @@ class Game {
     this.speed = level.fleetSpeed;
     this.drop = level.drop;
     this.shootCooldown = 0;
-    this.touchAxis = 0;
+    this.resetJoystick();
     this.enemyTimer = level.enemyFireDelay[0];
     this.moveSoundTimer = 0;
     this.ufo = null;
@@ -738,34 +751,7 @@ class Game {
       fireButton.addEventListener(type, fireRelease);
     });
 
-    this.joystick = document.querySelector("#move-joystick");
-    this.joystickThumb = this.joystick.querySelector(".joystick-thumb");
-    let joystickPointer = null;
-    const updateJoystick = (event) => {
-      if (joystickPointer !== event.pointerId) return;
-      const bounds = this.joystick.getBoundingClientRect();
-      const value = (event.clientX - bounds.left - bounds.width / 2) / (bounds.width * 0.32);
-      this.setJoystickValue(value);
-    };
-    const joystickPress = (event) => {
-      event.preventDefault();
-      joystickPointer = event.pointerId;
-      this.joystick.setPointerCapture?.(event.pointerId);
-      this.joystick.classList.add("is-active");
-      updateJoystick(event);
-    };
-    const joystickRelease = (event) => {
-      if (joystickPointer !== null && event.pointerId !== joystickPointer) return;
-      event.preventDefault();
-      joystickPointer = null;
-      this.joystick.classList.remove("is-active");
-      this.resetJoystick();
-    };
-    this.joystick.addEventListener("pointerdown", joystickPress);
-    this.joystick.addEventListener("pointermove", updateJoystick);
-    ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
-      this.joystick.addEventListener(type, joystickRelease);
-    });
+    this.bindJoystickControls();
 
     const resetInputs = () => {
       this.keys.ArrowLeft = false;
@@ -776,12 +762,18 @@ class Game {
       });
     };
 
+    let previousLandscape = null;
+    let previousWidth = null;
     const syncViewport = () => {
       const height = window.visualViewport?.height || window.innerHeight;
       const landscape = innerWidth > innerHeight;
       document.documentElement.style.setProperty("--app-height", `${Math.round(height)}px`);
       document.documentElement.dataset.orientation = landscape ? "landscape" : "portrait";
-      resetInputs();
+      if (landscape !== previousLandscape || (previousWidth !== null && innerWidth !== previousWidth)) {
+        resetInputs();
+      }
+      previousLandscape = landscape;
+      previousWidth = innerWidth;
       this.handleOrientation(landscape);
     };
 
@@ -792,26 +784,152 @@ class Game {
     };
 
     addEventListener("blur", resetInputs);
+    addEventListener("pagehide", resetInputs);
     addEventListener("resize", scheduleViewportSync, { passive: true });
     addEventListener("orientationchange", scheduleViewportSync, { passive: true });
     window.visualViewport?.addEventListener("resize", scheduleViewportSync, { passive: true });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) resetInputs();
+    });
     this.ui.action.addEventListener("click", () => this.start());
     this.ui.pause.addEventListener("click", () => this.togglePause());
     syncViewport();
   }
 
+  bindJoystickControls(joystick = document.querySelector("#move-joystick")) {
+    this.joystick = joystick;
+    this.joystickThumb = this.joystick.querySelector(".joystick-thumb");
+    this.joystick.addEventListener("pointerdown", (event) => this.handleJoystickStart(event));
+    this.joystick.addEventListener("pointermove", (event) => this.handleJoystickMove(event));
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
+      this.joystick.addEventListener(type, (event) => this.handleJoystickEnd(event));
+    });
+    this.joystick.addEventListener("keydown", (event) => this.handleJoystickKeyDown(event));
+    this.joystick.addEventListener("keyup", (event) => this.handleJoystickKeyUp(event));
+    this.joystick.addEventListener("blur", () => {
+      if (this.joystickPointer === null) this.resetJoystick();
+    });
+  }
+
+  measureJoystick() {
+    const bounds = this.joystick.getBoundingClientRect();
+    this.joystickGeometry = {
+      centerX: bounds.left + bounds.width / 2,
+      travel: Math.max(1, bounds.width * JOYSTICK_TRAVEL_RATIO),
+    };
+  }
+
+  handleJoystickStart(event) {
+    event.preventDefault();
+    if (this.joystickPointer !== null) return;
+
+    this.joystickPointer = event.pointerId;
+    this.measureJoystick();
+    this.joystick.setPointerCapture?.(event.pointerId);
+    this.joystick.classList.add("is-active");
+    this.handleJoystickMove(event);
+  }
+
+  handleJoystickMove(event) {
+    if (event.pointerId !== this.joystickPointer || !this.joystickGeometry) return;
+    event.preventDefault();
+    const value = (event.clientX - this.joystickGeometry.centerX) / this.joystickGeometry.travel;
+    this.setJoystickValue(value);
+  }
+
+  handleJoystickEnd(event) {
+    if (event.pointerId !== this.joystickPointer) return;
+    event.preventDefault();
+    this.resetJoystick();
+  }
+
+  handleJoystickKeyDown(event) {
+    const value = event.code === "ArrowLeft" || event.code === "Home"
+      ? -1
+      : event.code === "ArrowRight" || event.code === "End" ? 1 : null;
+    if (value === null) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.joystickGeometry) this.measureJoystick();
+    this.joystickKeys.add(event.code);
+    this.joystick.classList.add("is-active");
+    this.setJoystickValue(value);
+  }
+
+  handleJoystickKeyUp(event) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.code)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.joystickKeys.delete(event.code);
+    const leftPressed = this.joystickKeys.has("ArrowLeft") || this.joystickKeys.has("Home");
+    const rightPressed = this.joystickKeys.has("ArrowRight") || this.joystickKeys.has("End");
+    if (!leftPressed && !rightPressed) {
+      this.resetJoystick();
+    } else if (leftPressed !== rightPressed) {
+      this.setJoystickValue(rightPressed ? 1 : -1);
+    }
+  }
+
   setJoystickValue(value) {
     const normalized = Math.max(-1, Math.min(1, value));
-    this.touchAxis = Math.abs(normalized) < 0.2 ? 0 : Math.sign(normalized);
+    const magnitude = Math.abs(normalized);
+    this.touchAxis = magnitude <= JOYSTICK_DEAD_ZONE
+      ? 0
+      : Math.sign(normalized) * ((magnitude - JOYSTICK_DEAD_ZONE) / (1 - JOYSTICK_DEAD_ZONE));
+    this.joystickVisualValue = normalized;
     if (!this.joystick || !this.joystickThumb) return;
 
-    this.joystickThumb.style.left = `${50 + this.touchAxis * 32}%`;
-    this.joystick.setAttribute("aria-valuenow", String(this.touchAxis * 100));
-    const direction = this.touchAxis < 0 ? "Left" : this.touchAxis > 0 ? "Right" : "Centered";
-    this.joystick.setAttribute("aria-valuetext", direction);
+    this.scheduleJoystickRender();
+  }
+
+  scheduleJoystickRender() {
+    if (this.joystickRenderPending) return;
+    this.joystickRenderPending = true;
+    this.requestFrame(() => {
+      this.joystickRenderPending = false;
+      this.renderJoystick();
+    });
+  }
+
+  renderJoystick() {
+    if (!this.joystick || !this.joystickThumb) return;
+
+    const travel = this.joystickGeometry?.travel || 0;
+    const offset = Math.abs(this.joystickVisualValue) < 0.001
+      ? 0
+      : this.joystickVisualValue * travel;
+    this.joystickThumb.style.transform = `translate3d(calc(-50% + ${offset.toFixed(2)}px), -50%, 0)`;
+
+    const ariaValue = Math.round(this.touchAxis * 100);
+    const direction = ariaValue < 0 ? "left" : ariaValue > 0 ? "right" : "center";
+    const ariaText = direction === "center"
+      ? "Centered"
+      : `${direction === "left" ? "Left" : "Right"} ${Math.abs(ariaValue)}%`;
+
+    if (ariaValue !== this.joystickAriaValue) {
+      this.joystick.setAttribute("aria-valuenow", String(ariaValue));
+      this.joystickAriaValue = ariaValue;
+    }
+    if (ariaText !== this.joystickAriaText) {
+      this.joystick.setAttribute("aria-valuetext", ariaText);
+      this.joystickAriaText = ariaText;
+    }
+    if (direction !== this.joystickDirection) {
+      this.joystick.dataset.direction = direction;
+      this.joystickDirection = direction;
+    }
   }
 
   resetJoystick() {
+    const pointer = this.joystickPointer;
+    this.joystickPointer = null;
+    this.joystickGeometry = null;
+    this.joystickKeys.clear();
+    this.joystick?.classList.remove("is-active");
+    if (pointer !== null && this.joystick?.hasPointerCapture?.(pointer)) {
+      this.joystick.releasePointerCapture(pointer);
+    }
     this.setJoystickValue(0);
   }
 

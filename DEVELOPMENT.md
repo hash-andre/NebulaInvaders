@@ -54,6 +54,15 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Stabilità input mobile e joystick analogico
+
+- Individuata nel vecchio `pointermove` una sequenza ripetuta di lettura layout e scrittura di `left`/ARIA che poteva contendere il main thread al Canvas.
+- Ripristinato il movimento proporzionale con zona morta continua, geometria misurata una volta per gesto e feedback visuale coalesciuto su `requestAnimationFrame` tramite `transform`.
+- Ridisegnato il controllo come flight control più largo, con zona neutra, focus accessibile, supporto tastiera e istruzione per screen reader.
+- Evitato che i resize verticali della toolbar mobile interrompano una pressione; orientamento e variazioni reali di larghezza continuano a ripulire l'input.
+- Estesa la suite con stress da 240 campioni touch, lifecycle Pointer Events, deduplicazione DOM/ARIA e rollover da tastiera.
+- Diagnosi, misure prima/dopo, risultati e checklist device sono nel file [`MOBILE_INPUT_LOG.md`](MOBILE_INPUT_LOG.md).
+
 ### Joystick arcade binario
 
 - Compattato il controllo orizzontale mobile e ridisegnato il cursore come pomello circolare da cabinato.
