@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260711-10">
+  <link rel="stylesheet" href="style.css?v=20260711-12">
   <title>Nebula Invaders</title>
 </head>
 <body>
@@ -48,9 +48,12 @@
       </div>
 
       <div class="touch-controls" aria-label="Touch controls">
-        <div class="move-controls" role="group" aria-label="Movement">
-          <button class="touch-button" type="button" data-control="left" aria-label="Move left"><span aria-hidden="true">←</span></button>
-          <button class="touch-button" type="button" data-control="right" aria-label="Move right"><span aria-hidden="true">→</span></button>
+        <div class="move-controls">
+          <div class="joystick" id="move-joystick" role="slider" tabindex="0" aria-label="Horizontal movement" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Centered">
+            <span class="joystick-direction joystick-left" aria-hidden="true">−</span>
+            <span class="joystick-direction joystick-right" aria-hidden="true">+</span>
+            <span class="joystick-thumb" aria-hidden="true"><span></span></span>
+          </div>
         </div>
         <button class="touch-button fire-button" type="button" data-control="fire" aria-label="Fire"><span aria-hidden="true">●</span><small>Fire</small></button>
       </div>
@@ -67,6 +70,6 @@
     </div>
   </div>
 
-  <script src="script.js?v=20260711-13"></script>
+  <script src="script.js?v=20260711-15"></script>
 </body>
 </html>

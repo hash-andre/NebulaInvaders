@@ -19,6 +19,7 @@ function createElement() {
   return {
     textContent: "",
     innerHTML: "",
+    style: {},
     classList: createClassList(),
     setAttribute: (name, value) => attributes.set(name, value),
     getAttribute: (name) => attributes.get(name),
@@ -60,6 +61,10 @@ function createAudio() {
     "bossShoot",
     "bossHit",
     "bossDefeat",
+    "preBossAppear",
+    "preBossShoot",
+    "preBossHit",
+    "preBossDefeat",
   ].forEach((method) => {
     audio[method] = (levelIndex) => calls.push([method, levelIndex]);
   });
@@ -146,6 +151,35 @@ test("shooting and taking damage use distinct haptic feedback", () => {
   game.collisions();
   assert.deepEqual(vibrations, [12, [45, 35, 80]]);
   assert.ok(game.effects.some((effect) => effect instanceof Explosion));
+});
+
+test("the mobile joystick moves continuously across both directions and springs to center", () => {
+  const { game } = createGame();
+  game.joystick = createElement();
+  game.joystickThumb = createElement();
+  const startX = game.player.x;
+
+  game.setJoystickValue(-0.8);
+  assert.equal(game.touchAxis, -0.8);
+  assert.ok(Math.abs(parseFloat(game.joystickThumb.style.left) - 18.8) < 0.001);
+  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Left");
+  game.updatePlayer(1 / 60);
+  assert.ok(game.player.x < startX);
+
+  game.setJoystickValue(0.75);
+  assert.equal(game.touchAxis, 0.75);
+  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Right");
+
+  game.resetJoystick();
+  assert.equal(game.touchAxis, 0);
+  assert.equal(game.joystickThumb.style.left, "50%");
+  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Centered");
+});
+
+test("mobile markup uses one horizontal joystick instead of two direction buttons", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  assert.match(html, /id="move-joystick" role="slider"/);
+  assert.doesNotMatch(html, /data-control="(?:left|right)"/);
 });
 
 test("destroying an invader creates an explosion and a dedicated sound", () => {
@@ -241,6 +275,8 @@ test("the page includes an SVG favicon and a single-line mobile HUD", () => {
   assert.equal(fs.existsSync(path.join(__dirname, "..", "assets", "favicon.svg")), true);
   assert.match(css, /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(css, /white-space: nowrap/);
+  assert.match(css, /-webkit-touch-callout: none/);
+  assert.match(css, /-webkit-user-select: none/);
 });
 
 test("clearing a fleet starts that level's boss phase", () => {
@@ -255,6 +291,63 @@ test("clearing a fleet starts that level's boss phase", () => {
   assert.equal(game.boss.health, LEVELS[0].boss.health);
   assert.match(ui.status.textContent, /Orbital Sentinel/);
   assert.deepEqual(audio.calls.at(-1), ["bossAppear", 0]);
+});
+
+test("the final fleet unlocks a unique pre-boss before the Sovereign", () => {
+  const { game, ui, audio } = createGame();
+  game.levelIndex = LEVELS.length - 1;
+  game.loadLevel();
+  game.running = true;
+  game.invaders = [];
+
+  game.update(0);
+  assert.equal(game.phase, "pre-boss");
+  assert.equal(game.boss.kind, "harbinger");
+  assert.match(ui.status.textContent, /Rift Harbinger/);
+  assert.deepEqual(audio.calls.at(-1), ["preBossAppear", undefined]);
+
+  game.boss.health = 1;
+  game.damageBoss();
+  assert.equal(game.phase, "boss-transition");
+  assert.equal(game.preBossDefeated, true);
+  assert.deepEqual(audio.calls.at(-1), ["preBossDefeat", undefined]);
+
+  game.update(1.1);
+  assert.equal(game.phase, "boss");
+  assert.equal(game.boss.kind, "sovereign");
+});
+
+test("the pre-boss phase-shifts and alternates non-twin-core attacks", () => {
+  const { game } = createGame();
+  game.levelIndex = LEVELS.length - 1;
+  game.loadLevel();
+  game.spawnPreBoss();
+  game.boss.dashTimer = 0;
+  game.boss.fireTimer = 0;
+
+  game.updateBoss(0.1);
+  assert.equal(game.effects.length, 2, "phase shift should leave effects at departure and arrival");
+  assert.equal(game.enemyBullets.length, 5, "first Harbinger pattern is a five-way fan");
+
+  game.enemyBullets = [];
+  game.boss.fireTimer = 0;
+  game.updateBoss(0);
+  assert.equal(game.enemyBullets.length, 3, "second Harbinger pattern is converging crossfire");
+});
+
+test("the final boss cycles through aimed, crossfire, and curtain attacks", () => {
+  const { game } = createGame();
+  game.levelIndex = LEVELS.length - 1;
+  game.loadLevel();
+  game.spawnBoss();
+
+  [3, 3, 7].forEach((expectedCount) => {
+    game.enemyBullets = [];
+    game.boss.fireTimer = 0;
+    game.updateBoss(0);
+    assert.equal(game.enemyBullets.length, expectedCount);
+  });
+  assert.equal(game.boss.attackIndex, 3);
 });
 
 test("defeating a boss preserves progress and unlocks the next level", () => {

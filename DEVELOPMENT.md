@@ -54,6 +54,20 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Joystick orizzontale touch
+
+- Sostituiti i due pulsanti direzionali mobile con uno slider a ritorno automatico, trascinabile da sinistra a destra senza sollevare il dito.
+- Aggiunti movimento proporzionale, zona morta centrale, Pointer Capture e reset su rilascio, pausa, perdita del focus e rotazione.
+- Conservati pulsante Fire, comandi da tastiera e semantica accessibile tramite `role="slider"` e valori ARIA aggiornati.
+
+### Protezione touch e sequenza finale estesa
+
+- Disabilitati selezione del testo e callout da pressione prolungata nell'interfaccia tramite `user-select`, prefisso WebKit e `-webkit-touch-callout`.
+- Inserito il pre-boss Rift Harbinger dopo la flotta del livello 3, con salute e punteggio dedicati, transizione prima del boss finale e identità Canvas/Web Audio propria.
+- Il Rift Harbinger alterna teletrasporti con tracce particellari, inseguimento sinusoidale, raffiche a ventaglio e fuoco incrociato convergente.
+- Il Void Sovereign ora combina inseguimento verticale, cambi di obiettivo più rapidi e tre pattern: triplo mirato, fuoco incrociato e cortina a sette proiettili.
+- Estesa la suite per coprire progressione pre-boss, phase shift e rotazione degli attacchi finali.
+
 ### Distribuzione uniforme HUD mobile
 
 - Portato l'HUD mobile a tre colonne della stessa larghezza per distribuire score, stato della missione e vite come nella versione desktop.

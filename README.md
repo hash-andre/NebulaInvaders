@@ -24,7 +24,7 @@ Score and remaining lives carry over between levels. Completing the campaign awa
 | --- | --- | --- | --- |
 | 1 | Outer Patrol | Orbital Sentinel | Ring-shaped guardian with a descending laser cue |
 | 2 | Meteor Foundry | Twin Core | Dual-reactor silhouette, twin projectiles, and layered audio |
-| 3 | Nebula Throne | Void Sovereign | Winged final boss with heavy, dissonant sound design |
+| 3 | Nebula Throne | Rift Harbinger → Void Sovereign | Phase-shifting guardian followed by a multi-pattern final boss |
 
 Every level uses its own generated, preloaded WebP space background. The backgrounds keep the center of the playfield dark enough for bullets, enemies, and the player ship to remain readable.
 
@@ -32,6 +32,8 @@ Every level uses its own generated, preloaded WebP space background. The backgro
 
 - Three-level campaign with persistent score and lives.
 - Three visually distinct bosses with custom entrance, firing, hit, and destruction sounds.
+- A dedicated phase-shifting pre-boss before the final encounter.
+- Three alternating attack patterns and vertical pursuit movement for the Void Sovereign.
 - Animated invader fleets with progressively harder formations.
 - Enemy projectiles, collision handling, and increasing fleet speed.
 - Haptic feedback for firing and player damage on compatible mobile devices.

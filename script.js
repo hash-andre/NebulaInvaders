@@ -43,6 +43,15 @@ const LEVELS = [
     fleetSpeed: 38,
     drop: 20,
     enemyFireDelay: [0.62, 1.35],
+    preBoss: {
+      kind: "harbinger",
+      name: "Rift Harbinger",
+      health: 9,
+      speed: 148,
+      fireDelay: 0.88,
+      score: 1_250,
+      color: "#ffb84d",
+    },
     boss: {
       kind: "sovereign",
       name: "Void Sovereign",
@@ -142,6 +151,27 @@ class AudioEngine {
       setTimeout(() => {
         this.tone(roots[levelIndex] * ratio, 0.34, "sawtooth", 0.06, 30);
       }, index * 105);
+    });
+  }
+
+  preBossAppear() {
+    [[196, 0], [294, 90], [147, 190], [392, 285]].forEach(([frequency, delay], index) => {
+      setTimeout(() => this.tone(frequency, 0.2, index % 2 ? "square" : "triangle", 0.045, frequency * 0.55), delay);
+    });
+  }
+
+  preBossShoot() {
+    this.tone(410, 0.12, "triangle", 0.035, 120);
+    this.tone(205, 0.18, "sawtooth", 0.025, 70);
+  }
+
+  preBossHit() {
+    this.tone(240, 0.1, "square", 0.038, 90);
+  }
+
+  preBossDefeat() {
+    [392, 294, 196, 98].forEach((frequency, index) => {
+      setTimeout(() => this.tone(frequency, 0.26, "triangle", 0.05, 45), index * 90);
     });
   }
 
@@ -345,6 +375,7 @@ class Boss {
     const sizes = {
       sentinel: [126, 56],
       "twin-core": [144, 60],
+      harbinger: [118, 62],
       sovereign: [160, 68],
     };
     const [width, height] = sizes[config.kind];
@@ -360,10 +391,24 @@ class Boss {
       speedFactor: 1,
       fireTimer: config.fireDelay,
       maxHealth: config.health,
+      baseY: 52,
+      elapsed: 0,
+      dashTimer: 0.9,
+      attackIndex: 0,
+      phaseShift: null,
     });
   }
 
   update(deltaTime, canvasWidth, player, random = Math.random) {
+    this.elapsed += deltaTime;
+    this.phaseShift = null;
+
+    if (this.kind === "harbinger") {
+      this.updateHarbinger(deltaTime, canvasWidth, player, random);
+      this.fireTimer -= deltaTime;
+      return;
+    }
+
     this.targetTimer -= deltaTime;
     if (this.targetTimer <= 0) {
       const playerCenter = player.x + player.width / 2;
@@ -372,8 +417,8 @@ class Boss {
         canvasWidth - this.width - 22,
         playerCenter - this.width / 2 + pursuitOffset,
       ));
-      this.targetTimer = 0.42 + random() * 0.9;
-      this.speedFactor = 0.7 + random() * 0.65;
+      this.targetTimer = this.kind === "sovereign" ? 0.28 + random() * 0.55 : 0.42 + random() * 0.9;
+      this.speedFactor = this.kind === "sovereign" ? 0.95 + random() * 0.65 : 0.7 + random() * 0.65;
     }
 
     const distance = this.targetX - this.x;
@@ -381,8 +426,42 @@ class Boss {
     const step = Math.min(Math.abs(distance), this.speed * this.speedFactor * deltaTime);
     this.x += step * this.direction;
     this.x = Math.max(22, Math.min(canvasWidth - this.width - 22, this.x));
+    if (this.kind === "sovereign") this.y = this.baseY + Math.sin(this.elapsed * 2.4) * 20;
 
     this.fireTimer -= deltaTime;
+  }
+
+  updateHarbinger(deltaTime, canvasWidth, player, random) {
+    this.dashTimer -= deltaTime;
+    this.targetTimer -= deltaTime;
+
+    if (this.dashTimer <= 0) {
+      const fromX = this.x;
+      const fromY = this.y;
+      const playerCenter = player.x + player.width / 2;
+      const side = random() < 0.5 ? -1 : 1;
+      this.x = Math.max(18, Math.min(canvasWidth - this.width - 18, playerCenter - this.width / 2 + side * (110 + random() * 150)));
+      this.y = 42 + random() * 72;
+      this.phaseShift = { fromX, fromY, toX: this.x, toY: this.y };
+      this.dashTimer = 1.35 + random() * 1.1;
+      this.targetTimer = 0.25;
+    }
+
+    if (this.targetTimer <= 0) {
+      const playerCenter = player.x + player.width / 2;
+      this.targetX = Math.max(18, Math.min(
+        canvasWidth - this.width - 18,
+        playerCenter - this.width / 2 + Math.sin(this.elapsed * 5) * 120,
+      ));
+      this.targetTimer = 0.22 + random() * 0.28;
+      this.speedFactor = 0.9 + random() * 0.7;
+    }
+
+    const distance = this.targetX - this.x;
+    const step = Math.min(Math.abs(distance), this.speed * this.speedFactor * deltaTime);
+    this.x += Math.sign(distance) * step;
+    this.y += Math.sin(this.elapsed * 7) * 24 * deltaTime;
+    this.y = Math.max(34, Math.min(126, this.y));
   }
 
   draw(context, time) {
@@ -396,6 +475,7 @@ class Boss {
 
     if (this.kind === "sentinel") this.drawSentinel(context, center, pulse);
     else if (this.kind === "twin-core") this.drawTwinCore(context, pulse);
+    else if (this.kind === "harbinger") this.drawHarbinger(context, center, pulse, time);
     else this.drawSovereign(context, center, pulse);
 
     context.restore();
@@ -458,6 +538,31 @@ class Boss {
     context.fillRect(this.width / 2 - 9, 13, 18, 36);
   }
 
+  drawHarbinger(context, center, pulse, time) {
+    context.save();
+    context.translate(center, this.height / 2);
+    context.rotate(time / 850);
+    context.strokeStyle = this.color;
+    context.lineWidth = 5;
+    context.beginPath();
+    context.moveTo(0, -29);
+    context.lineTo(30, 0);
+    context.lineTo(0, 29);
+    context.lineTo(-30, 0);
+    context.closePath();
+    context.stroke();
+    context.rotate(-time / 425);
+    context.lineWidth = 2;
+    context.beginPath();
+    context.arc(0, 0, 20 + pulse * 4, 0, Math.PI * 2);
+    context.stroke();
+    context.fillStyle = "#fff6d5";
+    context.beginPath();
+    context.arc(0, 0, 7 + pulse * 2, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+  }
+
   drawSovereign(context, center, pulse) {
     context.fillStyle = this.color;
     context.beginPath();
@@ -514,6 +619,9 @@ class Game {
     ));
     this.portraitRequired = false;
     this.keys = {};
+    this.touchAxis = 0;
+    this.joystick = null;
+    this.joystickThumb = null;
     this.running = false;
     this.paused = false;
     this.lastTime = 0;
@@ -582,11 +690,14 @@ class Game {
     this.effects = [];
     this.invaders = [];
     this.boss = null;
+    this.preBossDefeated = false;
+    this.bossTransitionTimer = 0;
     this.phase = "fleet";
     this.direction = 1;
     this.speed = level.fleetSpeed;
     this.drop = level.drop;
     this.shootCooldown = 0;
+    this.touchAxis = 0;
     this.enemyTimer = level.enemyFireDelay[0];
     this.moveSoundTimer = 0;
     this.ufo = null;
@@ -611,34 +722,55 @@ class Game {
     addEventListener("keydown", (event) => this.handleKeyDown(event));
     addEventListener("keyup", (event) => this.handleKeyUp(event));
 
-    document.querySelectorAll("[data-control]").forEach((button) => {
-      const control = button.dataset.control;
-      const movementKey = control === "left" ? "ArrowLeft" : "ArrowRight";
+    const fireButton = document.querySelector('[data-control="fire"]');
+    const firePress = (event) => {
+      event.preventDefault();
+      fireButton.setPointerCapture?.(event.pointerId);
+      fireButton.classList.add("is-active");
+      this.shoot();
+    };
+    const fireRelease = (event) => {
+      event.preventDefault();
+      fireButton.classList.remove("is-active");
+    };
+    fireButton.addEventListener("pointerdown", firePress);
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
+      fireButton.addEventListener(type, fireRelease);
+    });
 
-      const press = (event) => {
-        event.preventDefault();
-        button.setPointerCapture?.(event.pointerId);
-        button.classList.add("is-active");
-
-        if (control === "fire") this.shoot();
-        else this.keys[movementKey] = true;
-      };
-
-      const release = (event) => {
-        event.preventDefault();
-        button.classList.remove("is-active");
-        if (control !== "fire") this.keys[movementKey] = false;
-      };
-
-      button.addEventListener("pointerdown", press);
-      ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
-        button.addEventListener(type, release);
-      });
+    this.joystick = document.querySelector("#move-joystick");
+    this.joystickThumb = this.joystick.querySelector(".joystick-thumb");
+    let joystickPointer = null;
+    const updateJoystick = (event) => {
+      if (joystickPointer !== event.pointerId) return;
+      const bounds = this.joystick.getBoundingClientRect();
+      const value = (event.clientX - bounds.left - bounds.width / 2) / (bounds.width * 0.39);
+      this.setJoystickValue(value);
+    };
+    const joystickPress = (event) => {
+      event.preventDefault();
+      joystickPointer = event.pointerId;
+      this.joystick.setPointerCapture?.(event.pointerId);
+      this.joystick.classList.add("is-active");
+      updateJoystick(event);
+    };
+    const joystickRelease = (event) => {
+      if (joystickPointer !== null && event.pointerId !== joystickPointer) return;
+      event.preventDefault();
+      joystickPointer = null;
+      this.joystick.classList.remove("is-active");
+      this.resetJoystick();
+    };
+    this.joystick.addEventListener("pointerdown", joystickPress);
+    this.joystick.addEventListener("pointermove", updateJoystick);
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
+      this.joystick.addEventListener(type, joystickRelease);
     });
 
     const resetInputs = () => {
       this.keys.ArrowLeft = false;
       this.keys.ArrowRight = false;
+      this.resetJoystick();
       document.querySelectorAll(".touch-button.is-active").forEach((button) => {
         button.classList.remove("is-active");
       });
@@ -666,6 +798,21 @@ class Game {
     this.ui.action.addEventListener("click", () => this.start());
     this.ui.pause.addEventListener("click", () => this.togglePause());
     syncViewport();
+  }
+
+  setJoystickValue(value) {
+    const normalized = Math.max(-1, Math.min(1, value));
+    this.touchAxis = Math.abs(normalized) < 0.12 ? 0 : normalized;
+    if (!this.joystick || !this.joystickThumb) return;
+
+    this.joystickThumb.style.left = `${50 + normalized * 39}%`;
+    this.joystick.setAttribute("aria-valuenow", String(Math.round(normalized * 100)));
+    const direction = this.touchAxis < 0 ? "Left" : this.touchAxis > 0 ? "Right" : "Centered";
+    this.joystick.setAttribute("aria-valuetext", direction);
+  }
+
+  resetJoystick() {
+    this.setJoystickValue(0);
   }
 
   handleOrientation(landscape) {
@@ -750,6 +897,7 @@ class Game {
     this.paused = !this.paused;
     this.keys.ArrowLeft = false;
     this.keys.ArrowRight = false;
+    this.resetJoystick();
     if (this.paused) {
       this.ui.kicker.textContent = "Mission suspended";
       this.ui.title.textContent = "Game paused";
@@ -790,6 +938,7 @@ class Game {
     this.updateBullets(deltaTime);
 
     if (this.phase === "fleet") this.updateFleet(deltaTime);
+    else if (this.phase === "boss-transition") this.updateBossTransition(deltaTime);
     else this.updateBoss(deltaTime);
 
     this.updateUfo(deltaTime);
@@ -800,13 +949,15 @@ class Game {
     if (this.phase === "fleet" && this.invaders.some((invader) => invader.y + invader.height >= this.player.y)) {
       this.finish(false);
     } else if (this.phase === "fleet" && this.invaders.length === 0) {
-      this.spawnBoss();
+      if (LEVELS[this.levelIndex].preBoss && !this.preBossDefeated) this.spawnPreBoss();
+      else this.spawnBoss();
     }
   }
 
   updatePlayer(deltaTime) {
     this.shootCooldown -= deltaTime;
-    const movement = (this.keys.ArrowRight ? 1 : 0) - (this.keys.ArrowLeft ? 1 : 0);
+    const keyboardMovement = (this.keys.ArrowRight ? 1 : 0) - (this.keys.ArrowLeft ? 1 : 0);
+    const movement = Math.max(-1, Math.min(1, keyboardMovement + this.touchAxis));
     const nextX = this.player.x + movement * this.player.speed * 60 * deltaTime;
     this.player.x = Math.max(8, Math.min(this.canvas.width - this.player.width - 8, nextX));
   }
@@ -857,23 +1008,83 @@ class Game {
     if (!this.boss) return;
 
     this.boss.update(deltaTime, this.canvas.width, this.player, this.random);
-    if (this.boss.fireTimer <= 0) {
-      const bulletSpeed = 195 + this.levelIndex * 25;
-      const origins = this.levelIndex === 0 ? [this.boss.width / 2] : [30, this.boss.width - 30];
-
-      origins.forEach((offset) => {
-        const originX = this.boss.x + offset;
-        const originY = this.boss.y + this.boss.height;
-        const targetX = this.player.x + this.player.width / 2;
-        const targetY = this.player.y + this.player.height / 2;
-        const travelTime = Math.max(0.1, (targetY - originY) / bulletSpeed);
-        const horizontalSpeed = (targetX - originX) / travelTime;
-        this.enemyBullets.push(new Bullet(originX, originY, bulletSpeed, true, horizontalSpeed));
-      });
-
-      this.audio.alienShoot();
-      this.boss.fireTimer = this.boss.fireDelay;
+    if (this.boss.phaseShift) {
+      const shift = this.boss.phaseShift;
+      this.effects.push(new Explosion(shift.fromX + this.boss.width / 2, shift.fromY + this.boss.height / 2, this.boss.color, this.random, {
+        duration: 0.42,
+        particleCount: 18,
+        power: 0.9,
+      }));
+      this.effects.push(new Explosion(shift.toX + this.boss.width / 2, shift.toY + this.boss.height / 2, this.boss.color, this.random, {
+        duration: 0.42,
+        particleCount: 18,
+        power: 0.9,
+      }));
     }
+
+    if (this.boss.fireTimer <= 0) {
+      this.fireBossPattern();
+    }
+  }
+
+  updateBossTransition(deltaTime) {
+    this.bossTransitionTimer -= deltaTime;
+    if (this.bossTransitionTimer <= 0) this.spawnBoss();
+  }
+
+  createAimedBullet(originX, originY, speed, targetOffset = 0, horizontalBias = 0) {
+    const targetX = this.player.x + this.player.width / 2 + targetOffset;
+    const targetY = this.player.y + this.player.height / 2;
+    const travelTime = Math.max(0.1, (targetY - originY) / speed);
+    return new Bullet(originX, originY, speed, true, (targetX - originX) / travelTime + horizontalBias);
+  }
+
+  fireBossPattern() {
+    const boss = this.boss;
+    const speed = 195 + this.levelIndex * 25;
+    const originY = boss.y + boss.height;
+
+    if (boss.kind === "harbinger") {
+      if (boss.attackIndex % 2 === 0) {
+        [-170, -85, 0, 85, 170].forEach((offset) => {
+          this.enemyBullets.push(this.createAimedBullet(boss.x + boss.width / 2, originY, speed + 15, offset));
+        });
+      } else {
+        [18, boss.width / 2, boss.width - 18].forEach((offset, index) => {
+          this.enemyBullets.push(this.createAimedBullet(boss.x + offset, originY, speed + 30, [120, 0, -120][index]));
+        });
+      }
+      this.audio.preBossShoot();
+      boss.fireTimer = boss.fireDelay * (boss.attackIndex % 2 === 0 ? 1.1 : 0.8);
+    } else if (boss.kind === "sovereign") {
+      const pattern = boss.attackIndex % 3;
+      if (pattern === 0) {
+        [-95, 0, 95].forEach((offset) => {
+          this.enemyBullets.push(this.createAimedBullet(boss.x + boss.width / 2, originY, speed + 25, offset));
+        });
+      } else if (pattern === 1) {
+        [18, boss.width / 2, boss.width - 18].forEach((offset, index) => {
+          this.enemyBullets.push(this.createAimedBullet(boss.x + offset, originY, speed + 10, [140, 0, -140][index]));
+        });
+      } else {
+        for (let index = 0; index < 7; index += 1) {
+          const offset = 12 + index * (boss.width - 24) / 6;
+          const horizontalBias = (index % 2 ? 1 : -1) * (55 + index * 5);
+          this.enemyBullets.push(new Bullet(boss.x + offset, originY, speed + 40, true, horizontalBias));
+        }
+      }
+      this.audio.bossShoot(this.levelIndex);
+      boss.fireTimer = boss.fireDelay * [1, 1.12, 1.35][pattern];
+    } else {
+      const origins = boss.kind === "sentinel" ? [boss.width / 2] : [30, boss.width - 30];
+      origins.forEach((offset) => {
+        this.enemyBullets.push(this.createAimedBullet(boss.x + offset, originY, speed));
+      });
+      this.audio.bossShoot(this.levelIndex);
+      boss.fireTimer = boss.fireDelay;
+    }
+
+    boss.attackIndex += 1;
   }
 
   updateUfo(deltaTime) {
@@ -916,9 +1127,19 @@ class Game {
     this.audio.bossAppear(this.levelIndex);
   }
 
+  spawnPreBoss() {
+    this.phase = "pre-boss";
+    this.ufo = null;
+    this.bullets = [];
+    this.enemyBullets = [];
+    this.boss = new Boss(LEVELS[this.levelIndex].preBoss, this.canvas.width);
+    this.ui.status.textContent = `PRE-BOSS · ${this.boss.name} · ${this.boss.health} HP`;
+    this.audio.preBossAppear();
+  }
+
   collisions() {
     this.bullets = this.bullets.filter((bullet) => {
-      if (this.phase === "boss" && this.boss && this.hit(bullet, this.boss)) {
+      if (["boss", "pre-boss"].includes(this.phase) && this.boss && this.hit(bullet, this.boss)) {
         this.effects.push(new Explosion(bullet.x, bullet.y, this.boss.color, this.random, {
           duration: 0.3,
           particleCount: 8,
@@ -995,16 +1216,29 @@ class Game {
         defeatedBoss.color,
         this.random,
       ));
-      this.audio.bossDefeat(this.levelIndex);
+      const preBoss = this.phase === "pre-boss";
+      if (preBoss) this.audio.preBossDefeat();
+      else this.audio.bossDefeat(this.levelIndex);
       this.score += this.boss.score;
       this.boss = null;
       this.updateHud();
-      this.completeLevel();
+      if (preBoss) {
+        this.preBossDefeated = true;
+        this.phase = "boss-transition";
+        this.bossTransitionTimer = 1.05;
+        this.bullets = [];
+        this.enemyBullets = [];
+        this.ui.status.textContent = "Rift collapsing · Sovereign incoming";
+      } else {
+        this.completeLevel();
+      }
       return;
     }
 
-    this.audio.bossHit(this.levelIndex);
-    this.ui.status.textContent = `BOSS · ${this.boss.name} · ${this.boss.health} HP`;
+    if (this.phase === "pre-boss") this.audio.preBossHit();
+    else this.audio.bossHit(this.levelIndex);
+    const label = this.phase === "pre-boss" ? "PRE-BOSS" : "BOSS";
+    this.ui.status.textContent = `${label} · ${this.boss.name} · ${this.boss.health} HP`;
   }
 
   completeLevel() {
@@ -1083,6 +1317,7 @@ class Game {
     const width = 210;
     const healthRatio = this.boss.health / this.boss.maxHealth;
     const x = (this.canvas.width - width) / 2;
+    const label = this.phase === "pre-boss" ? "RIFT GUARDIAN" : "LEVEL BOSS";
 
     context.save();
     context.font = '700 10px "Space Mono", monospace';
@@ -1090,7 +1325,7 @@ class Game {
     context.fillStyle = "#ffffff";
     context.shadowBlur = 8;
     context.shadowColor = this.boss.color;
-    context.fillText(`LEVEL BOSS · ${this.boss.name.toUpperCase()}`, this.canvas.width / 2, 15);
+    context.fillText(`${label} · ${this.boss.name.toUpperCase()}`, this.canvas.width / 2, 15);
     context.shadowBlur = 0;
     context.fillStyle = "rgba(5, 5, 15, .75)";
     context.fillRect(x, 22, width, 8);
