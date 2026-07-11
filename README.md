@@ -1,69 +1,104 @@
 # Nebula Invaders
 
-Un piccolo gioco arcade ispirato a *Space Invaders*, realizzato interamente con tecnologie web native.
+Nebula Invaders is a dependency-free browser arcade game inspired by *Space Invaders*. It includes a three-level campaign, a different boss and background for each sector, keyboard and touch controls, synthesized audio, and a responsive interface.
 
-## Come giocare
+## Play
 
-Apri `index.html` in un browser moderno e premi **Start mission**.
+Open `index.html` in a modern browser and select **Start mission**.
 
-- `←` e `→`: muovi la navicella.
-- `Spazio`: spara.
-- Su smartphone e tablet usa i pulsanti touch: frecce per muoverti e **Fire** per sparare.
-- Abbatti tutti gli alieni prima che raggiungano la navicella.
-- Evita i proiettili nemici: hai tre vite.
-- Colpisci l'UFO dorato per ottenere 500 punti bonus.
+- Use `←` and `→` to move.
+- Press `Space` to fire.
+- On phones and tablets, use the on-screen movement and fire controls.
+- Destroy the fleet before it reaches the player.
+- Avoid enemy projectiles; the campaign starts with three lives.
+- Hit the golden UFO for 500 bonus points.
+- Defeat the boss at the end of each level to unlock the next sector.
 
-Al termine della partita puoi usare **Retry mission** per ricominciare.
+Score and remaining lives carry over between levels. Completing the campaign awards 1,000 points for every remaining life.
 
-## Funzionalità
+## Campaign
 
-- Flotta aliena animata con velocità crescente.
-- Alieni capaci di sparare.
-- Sistema di vite e punteggio.
-- Bonus vittoria di 1.000 punti per ogni vita rimasta.
-- UFO bonus ispirato al gioco originale.
-- Effetti sonori per movimento, spari, impatti, vittoria e sconfitta.
-- Tema chiaro e scuro.
-- Controllo per disattivare l'audio.
-- Canvas responsive e interfaccia adattabile ai dispositivi mobili.
-- Layout desktop contenuto nell'altezza della finestra, senza scroll verticale.
-- Schermate di avvio, vittoria e game over.
+| Level | Sector | Boss | Character |
+| --- | --- | --- | --- |
+| 1 | Outer Patrol | Orbital Sentinel | Introductory fleet and single-shot boss |
+| 2 | Meteor Foundry | Twin Core | Denser formation and twin boss projectiles |
+| 3 | Nebula Throne | Void Sovereign | Fastest fleet, strongest boss, and final encounter |
 
-## Tecnologie
+Every level uses its own generated space background. The backgrounds keep the center of the playfield dark enough for bullets, enemies, and the player ship to remain readable.
 
-- **HTML5** per struttura, controlli e accessibilità.
-- **CSS3** per layout responsive, temi, animazioni e interfaccia.
-- **JavaScript ES6** per logica, classi e game loop.
-- **Canvas 2D API** per disegnare e animare il gioco.
-- **Web Audio API** per generare i suoni nel browser senza file audio esterni.
-- **Google Fonts** per i caratteri Chakra Petch e Space Mono.
-- **OpenAI Image Generation** per lo sfondo spaziale in `assets/space-background.png`.
+## Features
 
-Non sono richiesti framework, package manager o processo di compilazione.
+- Three-level campaign with persistent score and lives.
+- Three bosses with increasing health, speed, fire rate, and rewards.
+- Animated invader fleets with progressively harder formations.
+- Enemy projectiles, collision handling, and increasing fleet speed.
+- Golden UFO bonus encounters.
+- Victory bonus based on remaining lives.
+- Web Audio sound effects with an audio toggle.
+- Light and dark interface themes.
+- Responsive canvas and HUD for small phones, tablets, desktops, and large displays.
+- Touch controls built with Pointer Events and safe-area support.
+- Keyboard hints with vertically centered `<kbd>` content.
+- Start, level transition, victory, game-over, and campaign restart screens.
 
-## Struttura
+## Run locally
 
-```text
-.
-├── assets/
-│   └── space-background.png
-├── index.html
-├── script.js
-├── style.css
-├── README.md
-└── DEVELOPMENT.md
-```
-
-## Esecuzione locale
-
-È possibile aprire direttamente `index.html`. In alternativa, avvia un server statico dalla cartella del progetto:
+The project has no runtime dependencies or build step. You can open `index.html` directly, or serve the directory through a local static server:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-Poi visita `http://localhost:8000`.
+Then open `http://localhost:8000`.
 
-## Compatibilità
+## Test
 
-È consigliato un browser aggiornato con supporto per Canvas, Web Audio e JavaScript ES6. L'audio viene inizializzato dopo il primo click dell'utente, come richiesto dai browser moderni.
+Node.js is only required for development checks:
+
+```bash
+npm run check
+npm test
+```
+
+The tests use Node's built-in test runner, so `npm install` is not required.
+
+## Project structure
+
+```text
+.
+├── assets/
+│   ├── level-1-background.png
+│   ├── level-2-background.png
+│   ├── level-3-background.png
+│   └── space-background.png
+├── test/
+│   └── game.test.js
+├── DEVELOPMENT.md
+├── index.html
+├── package.json
+├── README.md
+├── script.js
+└── style.css
+```
+
+## Technology
+
+- HTML5 for semantic structure and accessible controls.
+- CSS3 for themes, responsive layout, safe areas, and touch feedback.
+- JavaScript for campaign state, entities, input, collision detection, and the game loop.
+- Canvas 2D for rendering gameplay.
+- Web Audio API for generated sound effects.
+- Google Fonts for Chakra Petch and Space Mono.
+- OpenAI Image Generation for the three campaign backgrounds.
+
+## Browser support
+
+Use a current browser with Canvas, Web Audio, Pointer Events, and modern JavaScript support. Audio starts after the first user interaction, as required by browser autoplay policies.
+
+## GitHub Pages
+
+This is a static site and can be deployed directly from the repository root. In the repository settings, choose **Deploy from a branch**, select `main`, and use `/ (root)` as the folder. See `DEVELOPMENT.md` for the deployment checklist and troubleshooting notes.
+
+## License
+
+No license has been declared yet.

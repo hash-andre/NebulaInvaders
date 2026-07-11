@@ -105,9 +105,73 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 - Azzerati movimento e stato visivo dei controlli touch durante rotazione, ridimensionamento e perdita del focus, evitando input bloccati.
 - Estesi i controlli mobile ai dispositivi touch fino a 1.024 px e aggiornata la versione degli asset per GitHub Pages.
 
+### Responsive esteso e allineamento controlli
+
+- Centrato verticalmente il contenuto dei tag `<kbd>` con `inline-flex`, altezza esplicita e `line-height: 1`, evitando differenze di baseline tra browser e font caricati.
+- Applicata una correzione ottica di un pixel alle frecce dei controlli touch, che su alcuni telefoni apparivano leggermente più in basso rispetto al centro del pulsante.
+- Aggiunti breakpoint per telefoni stretti o bassi e per display desktop superiori a 1.400 px, mantenendo il rapporto 3:2 del Canvas.
+- Sostituito il secondo aggiornamento ritardato del viewport con un aggiornamento al frame successivo tramite `requestAnimationFrame`: non è più presente un timeout di throttling/debounce durante resize e rotazione.
+
+### Campagna, livelli e boss
+
+- Riorganizzato `script.js` in metodi brevi e leggibili, separando aggiornamento del giocatore, flotta, boss, UFO, proiettili, collisioni e rendering.
+- Introdotta la configurazione `LEVELS`, che descrive formazione, velocità, caduta, frequenza di fuoco, fondale e boss di ogni settore.
+- Aggiunti tre livelli con punteggio e vite persistenti, schermata di transizione e riavvio completo dopo vittoria o sconfitta.
+- Aggiunta la classe `Boss` con salute, barra HP, movimento orizzontale, schemi di fuoco crescenti e ricompense dedicate.
+- Mantenuto l'UFO bonus durante le fasi flotta; la vittoria della campagna assegna il bonus vite una sola volta.
+
+### Fondali per livello
+
+- Generati tre fondali 3:2 distinti e salvati in `assets/level-1-background.png`, `assets/level-2-background.png` e `assets/level-3-background.png`.
+- Ogni configurazione di livello indica il proprio asset; `loadLevel()` aggiorna sia l'immagine disegnata nel Canvas sia il fallback CSS.
+- Le composizioni lasciano il centro del campo relativamente scuro per preservare il contrasto di sprite e proiettili.
+
+### Test automatici
+
+- Aggiunto `package.json` senza dipendenze esterne e configurati `npm run check` e `npm test`.
+- Aggiunti test con `node:test` per configurazione dei livelli, esistenza e unicità dei fondali, inizializzazione HUD, movimento dei proiettili, collisioni, comparsa dei boss, avanzamento e vittoria finale.
+- Resa `Game` testabile tramite injection opzionale di UI, audio, generatore casuale e binding dei controlli, senza cambiare il bootstrap usato dal browser.
+
+## Deployment GitHub Pages
+
+Il progetto non richiede build: GitHub Pages deve pubblicare direttamente i file presenti nella root del branch `main`.
+
+### Configurazione prevista
+
+1. Aprire **Settings → Pages** nel repository GitHub.
+2. In **Build and deployment**, selezionare **Deploy from a branch**.
+3. Selezionare il branch `main`, la cartella `/ (root)` e salvare.
+4. Attendere che il deployment Pages termini prima di verificare il sito; un push concluso non implica che la CDN sia già aggiornata.
+
+### Checklist prima del push
+
+```bash
+npm run check
+npm test
+git status --short
+```
+
+- `index.html`, `style.css`, `script.js` e tutti gli asset referenziati devono essere tracciati da Git.
+- I percorsi devono mantenere esattamente maiuscole e minuscole: GitHub Pages usa un filesystem case-sensitive.
+- Gli URL degli asset devono restare relativi, così funzionano sotto il prefisso `/NebulaInvaders/`.
+- Il parametro di versione di `style.css` e `script.js` in `index.html` va aggiornato quando cambia uno dei due file, per evitare combinazioni di markup nuovo e cache vecchia.
+
+### Diagnosi dei problemi comuni
+
+| Sintomo | Controllo | Soluzione |
+| --- | --- | --- |
+| Il sito restituisce 404 | Source e cartella Pages | Impostare `main` e `/ (root)` |
+| Si vede ancora il codice precedente | Cache browser/CDN | Attendere il deploy, fare hard refresh e verificare il parametro `?v=` |
+| Mancano fondali o CSS | Percorso o maiuscole | Confrontare l'URL nella console Network con il nome tracciato da Git |
+| Il gioco parte in locale ma non online | Errori JavaScript | Aprire DevTools Console e controllare il primo errore, non quelli conseguenti |
+| Il push è riuscito ma la pagina non cambia | Deployment ancora in corso o fallito | Controllare la sezione **Actions** e lo stato mostrato in **Settings → Pages** |
+
+Per distinguere un problema di codice da uno di pubblicazione, servire localmente lo stesso commit con `python3 -m http.server 8000`. Se il commit funziona in locale ma non sull'URL Pages, controllare prima configurazione, log del deployment e cache.
+
 ## Verifiche
 
-- Sintassi di `script.js` controllata con `node --check`.
+- Sintassi di `script.js` controllata con `npm run check` (`node --check`).
+- Suite automatica eseguita con `npm test`.
 - Il progetto non richiede una fase di build.
 - La verifica finale dell'aspetto e dell'audio va effettuata in un browser moderno.
 
