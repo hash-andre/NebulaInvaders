@@ -75,6 +75,7 @@ h1 span { color: var(--accent); }
 .hud > div { display: flex; align-items: center; gap: 12px; }
 .hud-label { color: var(--muted); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; }
 .hud strong { font-family: "Chakra Petch"; font-size: 20px; letter-spacing: .08em; }
+.hud-level { color: var(--cyan); font-size: 8px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 .hud-center { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .12em; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 9px #4ade80; }
 .lives-wrap { justify-content: flex-end; }
@@ -143,6 +144,7 @@ kbd { min-width: 27px; height: 27px; padding: 0 7px; display: inline-flex; align
   .hud { height: 44px; padding: 0 10px; }
   .hud > div { gap: 7px; }
   .hud strong { font-size: 16px; }
+  .hud-level { font-size: 7px; }
   .touch-controls { padding-top: 9px; }
   .touch-button { width: clamp(54px, 18vw, 66px); height: 54px; }
   .fire-button { width: 68px; }
