@@ -32,6 +32,8 @@ Every level uses its own generated, preloaded WebP space background. The backgro
 - Three visually distinct bosses with custom entrance, firing, hit, and destruction sounds.
 - Animated invader fleets with progressively harder formations.
 - Enemy projectiles, collision handling, and increasing fleet speed.
+- Haptic feedback for firing and player damage on compatible mobile devices.
+- Particle explosions and dedicated audio feedback when invaders are destroyed.
 - Golden UFO bonus encounters.
 - Victory bonus based on remaining lives.
 - Web Audio sound effects with an audio toggle.
@@ -40,6 +42,7 @@ Every level uses its own generated, preloaded WebP space background. The backgro
 - Touch controls built with Pointer Events and safe-area support.
 - Keyboard hints with vertically centered `<kbd>` content.
 - Start, level transition, victory, game-over, and campaign restart screens.
+- A unique victory fanfare after completing the full campaign.
 
 ## Run locally
 

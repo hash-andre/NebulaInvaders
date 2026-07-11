@@ -45,8 +45,9 @@ function createAudio() {
     "alienShoot",
     "move",
     "hit",
+    "enemyDefeat",
     "bonus",
-    "win",
+    "campaignWin",
     "lose",
     "bossAppear",
     "bossShoot",
@@ -69,14 +70,16 @@ function createGame() {
   };
   const ui = createUi();
   const audio = createAudio();
+  const vibrations = [];
   const game = new Game(canvas, {
     ui,
     audio,
     bindControls: false,
     random: () => 0.5,
+    vibrate: (pattern) => vibrations.push(pattern),
   });
 
-  return { game, canvas, ui, audio };
+  return { game, canvas, ui, audio, vibrations };
 }
 
 test("campaign defines unique backgrounds and bosses for every level", () => {
@@ -114,6 +117,30 @@ test("aimed bullets move horizontally as well as vertically", () => {
   bullet.update(0.25);
   assert.equal(bullet.x, 80);
   assert.equal(bullet.y, 150);
+});
+
+test("shooting and taking damage use distinct haptic feedback", () => {
+  const { game, vibrations } = createGame();
+  game.running = true;
+  game.shoot();
+  assert.deepEqual(vibrations, [12]);
+
+  game.enemyBullets = [new Bullet(game.player.x, game.player.y, 0, true)];
+  game.collisions();
+  assert.deepEqual(vibrations, [12, [45, 35, 80]]);
+});
+
+test("destroying an invader creates an explosion and a dedicated sound", () => {
+  const { game, audio } = createGame();
+  const invader = game.invaders[0];
+  game.bullets = [new Bullet(invader.x, invader.y, 0)];
+
+  game.collisions();
+
+  assert.equal(game.effects.length, 1);
+  assert.deepEqual(audio.calls.at(-1), ["enemyDefeat", invader.row]);
+  game.updateEffects(0.5);
+  assert.equal(game.effects.length, 0);
 });
 
 test("clearing a fleet starts that level's boss phase", () => {
@@ -216,7 +243,7 @@ test("the final boss awards boss points and the remaining-life bonus once", () =
   assert.equal(game.score, expectedScore);
   assert.equal(game.ended, true);
   assert.equal(ui.title.textContent, "Galaxy saved");
-  assert.equal(audio.calls.filter(([method]) => method === "win").length, 1);
+  assert.equal(audio.calls.filter(([method]) => method === "campaignWin").length, 1);
 
   game.finish(true);
   assert.equal(game.score, expectedScore, "finish must be idempotent");

@@ -55,6 +55,8 @@ const LEVELS = [
   },
 ];
 
+const INVADER_COLORS = ["#ff70d2", "#a77aff", "#54e8ff", "#ffd95a"];
+
 class AudioEngine {
   constructor() {
     this.ctx = null;
@@ -95,6 +97,12 @@ class AudioEngine {
   alienShoot() { this.tone(180, 0.13, "sawtooth", 0.025, 420); }
   move() { this.tone([90, 105, 125, 150][this.step++ % 4], 0.055, "square", 0.018); }
   hit() { this.tone(130, 0.12, "sawtooth", 0.04, 45); }
+
+  enemyDefeat(row) {
+    const frequency = [520, 440, 360, 620][row % 4];
+    this.tone(frequency, 0.11, "square", 0.035, frequency * 0.35);
+    this.tone(frequency * 1.5, 0.07, "triangle", 0.018, frequency * 0.8);
+  }
 
   bossAppear(levelIndex) {
     const sequences = [
@@ -143,9 +151,12 @@ class AudioEngine {
     });
   }
 
-  win() {
-    [440, 554, 659, 880].forEach((frequency, index) => {
-      setTimeout(() => this.tone(frequency, 0.25, "triangle", 0.05), index * 130);
+  campaignWin() {
+    [523, 659, 784, 1_047, 1_319].forEach((frequency, index) => {
+      setTimeout(() => {
+        this.tone(frequency, index === 4 ? 0.55 : 0.2, "triangle", 0.05);
+        if (index === 4) this.tone(659, 0.55, "sine", 0.035);
+      }, 420 + index * 125);
     });
   }
 
@@ -219,8 +230,7 @@ class Invader {
   }
 
   draw(context, frame) {
-    const colors = ["#ff70d2", "#a77aff", "#54e8ff", "#ffd95a"];
-    const color = colors[this.row % colors.length];
+    const color = INVADER_COLORS[this.row % INVADER_COLORS.length];
 
     context.save();
     context.translate(this.x, this.y);
@@ -243,6 +253,58 @@ class Invader {
     }
 
     context.restore();
+  }
+}
+
+class Explosion {
+  constructor(x, y, color, random = Math.random) {
+    this.x = x;
+    this.y = y;
+    this.age = 0;
+    this.duration = 0.48;
+    this.particles = Array.from({ length: 14 }, (_, index) => {
+      const angle = (Math.PI * 2 * index) / 14 + (random() - 0.5) * 0.3;
+      const speed = 45 + random() * 95;
+      return {
+        x: 0,
+        y: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 1.5 + random() * 2.5,
+        color: index % 3 === 0 ? "#ffffff" : color,
+      };
+    });
+  }
+
+  update(deltaTime) {
+    this.age += deltaTime;
+    this.particles.forEach((particle) => {
+      particle.x += particle.vx * deltaTime;
+      particle.y += particle.vy * deltaTime;
+      particle.vx *= Math.pow(0.04, deltaTime);
+      particle.vy *= Math.pow(0.04, deltaTime);
+    });
+  }
+
+  draw(context) {
+    const progress = Math.min(1, this.age / this.duration);
+    context.save();
+    context.translate(this.x, this.y);
+    context.globalAlpha = 1 - progress;
+    context.globalCompositeOperation = "lighter";
+    context.shadowBlur = 12;
+    this.particles.forEach((particle) => {
+      context.shadowColor = particle.color;
+      context.fillStyle = particle.color;
+      context.beginPath();
+      context.arc(particle.x, particle.y, particle.radius * (1 - progress * 0.5), 0, Math.PI * 2);
+      context.fill();
+    });
+    context.restore();
+  }
+
+  get finished() {
+    return this.age >= this.duration;
   }
 }
 
@@ -409,6 +471,11 @@ class Game {
     this.ctx = canvas.getContext("2d");
     this.audio = options.audio || new AudioEngine();
     this.random = options.random || Math.random;
+    this.vibrate = options.vibrate || ((pattern) => {
+      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        navigator.vibrate(pattern);
+      }
+    });
     this.keys = {};
     this.running = false;
     this.lastTime = 0;
@@ -473,6 +540,7 @@ class Game {
     this.player = new Player(this.canvas.width / 2 - 23, 430);
     this.bullets = [];
     this.enemyBullets = [];
+    this.effects = [];
     this.invaders = [];
     this.boss = null;
     this.phase = "fleet";
@@ -591,6 +659,7 @@ class Game {
     this.bullets.push(new Bullet(this.player.x + 21, this.player.y - 9, -350));
     this.shootCooldown = 0.3;
     this.audio.shoot();
+    this.vibrate(12);
   }
 
   update(deltaTime) {
@@ -598,6 +667,7 @@ class Game {
 
     this.updatePlayer(deltaTime);
     this.updateBullets(deltaTime);
+    this.updateEffects(deltaTime);
 
     if (this.phase === "fleet") this.updateFleet(deltaTime);
     else this.updateBoss(deltaTime);
@@ -625,6 +695,11 @@ class Game {
     [...this.bullets, ...this.enemyBullets].forEach((bullet) => bullet.update(deltaTime));
     this.bullets = this.bullets.filter((bullet) => bullet.y > -20);
     this.enemyBullets = this.enemyBullets.filter((bullet) => bullet.y < this.canvas.height + 20);
+  }
+
+  updateEffects(deltaTime) {
+    this.effects.forEach((effect) => effect.update(deltaTime));
+    this.effects = this.effects.filter((effect) => !effect.finished);
   }
 
   updateFleet(deltaTime) {
@@ -730,10 +805,17 @@ class Game {
 
       const invaderIndex = this.invaders.findIndex((invader) => this.hit(bullet, invader));
       if (invaderIndex >= 0) {
-        this.score += [30, 20, 10, 40][this.invaders[invaderIndex].row];
+        const invader = this.invaders[invaderIndex];
+        this.score += [30, 20, 10, 40][invader.row];
+        this.effects.push(new Explosion(
+          invader.x + invader.width / 2,
+          invader.y + invader.height / 2,
+          INVADER_COLORS[invader.row % INVADER_COLORS.length],
+          this.random,
+        ));
         this.invaders.splice(invaderIndex, 1);
         this.speed += 0.75;
-        this.audio.hit();
+        this.audio.enemyDefeat(invader.row);
         this.updateHud();
         return false;
       }
@@ -755,6 +837,7 @@ class Game {
 
       this.lives -= 1;
       this.audio.hit();
+      this.vibrate([45, 35, 80]);
       this.updateHud();
       this.player.x = this.canvas.width / 2 - 23;
       if (this.lives <= 0) this.finish(false);
@@ -825,7 +908,7 @@ class Game {
     this.ui.action.textContent = "Restart campaign";
     this.ui.status.textContent = win ? "Victory" : "Mission failed";
     this.ui.panel.classList.remove("hidden");
-    if (win) this.audio.win();
+    if (win) this.audio.campaignWin();
     else this.audio.lose();
   }
 
@@ -848,6 +931,7 @@ class Game {
 
     const animationFrame = Math.floor(performance.now() / 300) % 2;
     this.invaders.forEach((invader) => invader.draw(context, animationFrame));
+    this.effects.forEach((effect) => effect.draw(context));
     this.boss?.draw(context, performance.now());
     this.bullets.forEach((bullet) => bullet.draw(context));
     this.enemyBullets.forEach((bullet) => bullet.draw(context));
@@ -924,7 +1008,7 @@ function bootstrap() {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { LEVELS, AudioEngine, Bullet, Player, Invader, Boss, Game };
+  module.exports = { LEVELS, AudioEngine, Bullet, Player, Invader, Explosion, Boss, Game };
 }
 
 if (typeof document !== "undefined") {

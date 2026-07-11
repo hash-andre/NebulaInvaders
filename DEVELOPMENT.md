@@ -53,6 +53,14 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Feedback aptico, esplosioni e fanfara finale
+
+- Integrata la Vibration API con impulso breve allo sparo e sequenza più intensa quando il giocatore subisce danni; sui dispositivi non compatibili il comportamento degrada senza errori.
+- Aggiunto un sistema di particelle Canvas per animare la distruzione degli invasori, con colore coerente alla loro fila e rimozione automatica a fine effetto.
+- Creato un effetto sonoro dedicato alla distruzione degli invasori e separato dal suono di danno del giocatore.
+- Introdotta una fanfara specifica, ritardata rispetto all'esplosione del boss finale, per rendere riconoscibile il completamento dell'intera campagna.
+- Aggiunti test automatici per vibrazione, particelle, relativo ciclo di vita e identità dei nuovi feedback sonori.
+
 ### Precaricamento fondali, boss adattivi e rotazione touch
 
 - Convertiti i fondali dei livelli in WebP 1080×720 e precaricati tutti all'avvio, riutilizzando la stessa immagine decodificata durante i cambi di settore.
