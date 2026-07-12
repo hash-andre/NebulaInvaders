@@ -154,7 +154,7 @@ test("shooting and taking damage use distinct haptic feedback", () => {
   assert.ok(game.effects.some((effect) => effect instanceof Explosion));
 });
 
-test("the mobile joystick provides proportional movement and springs to center", () => {
+test("the mobile arcade knob provides binary movement and springs to center", () => {
   const { game } = createGame();
   game.joystick = createElement();
   game.joystickThumb = createElement();
@@ -162,19 +162,18 @@ test("the mobile joystick provides proportional movement and springs to center",
   const startX = game.player.x;
 
   game.setJoystickValue(-0.8);
-  assert.ok(Math.abs(game.touchAxis - (-0.68 / 0.88)) < 0.0001);
-  assert.match(game.joystickThumb.style.transform, /-56\.00px/);
-  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Left 77%");
+  assert.equal(game.touchAxis, -1);
+  assert.match(game.joystickThumb.style.transform, /-70\.00px/);
+  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Left");
   game.updatePlayer(1 / 60);
-  assert.ok(game.player.x < startX);
-  assert.ok(game.player.x > startX - game.player.speed, "partial travel must stay below full speed");
+  assert.equal(game.player.x, startX - game.player.speed, "the on/off control must move at full speed");
 
   game.setJoystickValue(0.75);
-  assert.ok(Math.abs(game.touchAxis - (0.63 / 0.88)) < 0.0001);
-  assert.match(game.joystickThumb.style.transform, /52\.50px/);
-  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Right 72%");
+  assert.equal(game.touchAxis, 1);
+  assert.match(game.joystickThumb.style.transform, /70\.00px/);
+  assert.equal(game.joystick.getAttribute("aria-valuetext"), "Right");
 
-  game.setJoystickValue(0.1);
+  game.setJoystickValue(0.19);
   assert.equal(game.touchAxis, 0, "the center dead zone must remain stable");
 
   game.resetJoystick();
@@ -251,16 +250,14 @@ test("a burst of touch samples measures layout once and renders only the latest 
   assert.ok(game.touchAxis > 0.99, "gameplay input must use the latest sample immediately");
 
   frames.shift()();
-  assert.match(thumb.style.transform, /70\.00px/);
+  assert.match(thumb.style.transform, /64\.00px/);
   assert.equal(styleWrites, 1);
   assert.equal(ariaWrites, 2, "ARIA state must be written once for the rendered sample");
   assert.equal(joystick.dataset.direction, "right");
 
   for (let index = 0; index < 120; index += 1) emit("pointermove", pointerEvent(270));
-  assert.equal(frames.length, 1, "coalescing must resume for the next display frame");
+  assert.equal(frames.length, 0, "holding one binary direction must not schedule redundant frames");
   assert.equal(styleWrites, 1);
-  frames.shift()();
-  assert.equal(styleWrites, 2);
   assert.equal(ariaWrites, 2, "unchanged ARIA state must not be rewritten on later frames");
 
   emit("pointerup", pointerEvent(270));
@@ -313,7 +310,7 @@ test("joystick keyboard controls preserve the direction that is still held", () 
   assert.equal(game.joystick.classList.contains("is-active"), false);
 });
 
-test("mobile markup exposes an accessible analog joystick without layout animation", () => {
+test("mobile markup exposes an accessible binary arcade knob without layout animation", () => {
   const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "..", "style.css"), "utf8");
   const script = fs.readFileSync(path.join(__dirname, "..", "script.js"), "utf8");

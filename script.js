@@ -65,8 +65,8 @@ const LEVELS = [
 ];
 
 const INVADER_COLORS = ["#ff70d2", "#a77aff", "#54e8ff", "#ffd95a"];
-const JOYSTICK_DEAD_ZONE = 0.12;
-const JOYSTICK_TRAVEL_RATIO = 0.35;
+const JOYSTICK_DEAD_ZONE = 0.2;
+const JOYSTICK_TRAVEL_RATIO = 0.32;
 
 class AudioEngine {
   constructor() {
@@ -873,11 +873,11 @@ class Game {
 
   setJoystickValue(value) {
     const normalized = Math.max(-1, Math.min(1, value));
-    const magnitude = Math.abs(normalized);
-    this.touchAxis = magnitude <= JOYSTICK_DEAD_ZONE
-      ? 0
-      : Math.sign(normalized) * ((magnitude - JOYSTICK_DEAD_ZONE) / (1 - JOYSTICK_DEAD_ZONE));
-    this.joystickVisualValue = normalized;
+    const nextAxis = Math.abs(normalized) < JOYSTICK_DEAD_ZONE ? 0 : Math.sign(normalized);
+    if (nextAxis === this.touchAxis) return;
+
+    this.touchAxis = nextAxis;
+    this.joystickVisualValue = nextAxis;
     if (!this.joystick || !this.joystickThumb) return;
 
     this.scheduleJoystickRender();
@@ -896,16 +896,14 @@ class Game {
     if (!this.joystick || !this.joystickThumb) return;
 
     const travel = this.joystickGeometry?.travel || 0;
-    const offset = Math.abs(this.joystickVisualValue) < 0.001
-      ? 0
-      : this.joystickVisualValue * travel;
+    const offset = this.joystickVisualValue * travel;
     this.joystickThumb.style.transform = `translate3d(calc(-50% + ${offset.toFixed(2)}px), -50%, 0)`;
 
     const ariaValue = Math.round(this.touchAxis * 100);
     const direction = ariaValue < 0 ? "left" : ariaValue > 0 ? "right" : "center";
     const ariaText = direction === "center"
       ? "Centered"
-      : `${direction === "left" ? "Left" : "Right"} ${Math.abs(ariaValue)}%`;
+      : direction === "left" ? "Left" : "Right";
 
     if (ariaValue !== this.joystickAriaValue) {
       this.joystick.setAttribute("aria-valuenow", String(ariaValue));

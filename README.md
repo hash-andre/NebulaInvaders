@@ -44,7 +44,7 @@ Every level uses its own generated, preloaded WebP space background. The backgro
 - A focused dark arcade interface.
 - Responsive canvas and HUD for small phones, tablets, desktops, and large displays.
 - Automatic pause and portrait-orientation warning on mobile landscape rotation.
-- Low-overhead analog flight control and Fire button built with Pointer Events, Pointer Capture, and safe-area support.
+- Low-overhead binary arcade knob and Fire button built with Pointer Events, Pointer Capture, and safe-area support.
 - Keyboard hints with vertically centered `<kbd>` content.
 - Start, level transition, victory, game-over, and campaign restart screens.
 - A unique victory fanfare after completing the full campaign.

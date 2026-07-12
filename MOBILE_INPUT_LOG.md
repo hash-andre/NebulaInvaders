@@ -1,97 +1,69 @@
 # Log stabilità input mobile
 
 Data: 12 luglio 2026  
-Ambito: stuttering durante l'uso touch e redesign del controllo orizzontale.
+Ambito: ripristino del pomello arcade binario e verifica dello stuttering touch.
 
 ## Obiettivo
 
-Individuare il lavoro aggiunto dal joystick sul main thread, correggere la regressione di responsività del controllo binario e verificare il risultato senza modificare il bilanciamento del gioco o i comandi desktop.
+Rimuovere il controllo analogico con accelerazione, ripristinare il pomello on/off compatto della revisione precedente e conservare le ottimizzazioni necessarie a non contendere il main thread al rendering Canvas.
 
-## Registro attività
+## Implementazione
 
-### 1. Baseline
+- Ripristinati tre soli stati di movimento: sinistra a velocità piena, neutro e destra a velocità piena, con zona morta centrale del 20%.
+- Ripristinati il pomello circolare e le dimensioni compatte del commit `efc9c02`, mantenendo focus visibile, supporto tastiera e descrizione per screen reader.
+- La geometria del controllo viene letta una volta al `pointerdown` e riutilizzata per tutto il gesto.
+- Il valore usato dal gioco cambia subito; l'aggiornamento visivo viene coalesciuto su `requestAnimationFrame` e usa soltanto `transform: translate3d(...)`.
+- Gli eventi che restano nello stesso stato binario non pianificano alcun frame DOM e non riscrivono stile o attributi ARIA.
+- Pointer Capture, reset su release/cancel/blur/pagehide e gestione dei resize della toolbar mobile restano attivi.
 
-- Verificato il working tree prima dell'intervento: nessuna modifica locale preesistente.
-- Eseguiti `npm run check` e la suite esistente: sintassi valida e 26/26 test superati.
-- Isolato il percorso caldo `pointerdown` / `pointermove` / `pointerup` del joystick.
-- Controllato separatamente il game loop Canvas per non attribuire automaticamente ogni costo al nuovo input.
+## Stress test dell'input
 
-### 2. Riproduzione del problema
+Il test automatico invia un `pointerdown`, 240 campioni di trascinamento e campioni da un puntatore estraneo. Verifica:
 
-Stress sintetico sulla versione iniziale del controllo: un `pointerdown` seguito da 240 `pointermove` produceva:
+- una sola chiamata a `getBoundingClientRect()` per gesto;
+- zero scritture di stile negli handler Pointer Events;
+- un solo aggiornamento visuale nel frame, con l'ultimo stato ricevuto;
+- zero frame e zero scritture aggiuntive per altri 120 campioni sullo stesso lato;
+- deduplicazione degli attributi ARIA;
+- reset idempotente su release, cancel e perdita della capture;
+- ritorno al centro corretto anche se il gesto termina prima del frame pendente.
 
-- 241 chiamate a `getBoundingClientRect()`;
-- 241 scritture di `style.left`;
-- 482 scritture degli attributi ARIA.
+La vecchia implementazione binaria eseguiva invece 241 letture layout, 241 scritture di `style.left` e 482 scritture ARIA sullo stesso burst. Il comportamento binario è stato quindi ripristinato senza ripristinare quel percorso caldo.
 
-La lettura del layout era seguita da una scrittura di `left` a ogni campione touch, anche quando la direzione binaria non cambiava. Su dispositivi che inviano eventi touch più rapidamente del refresh dello schermo, questa sequenza può forzare layout e paint ridondanti in concorrenza con il Canvas.
+## Verifica del frame pacing
 
-Il secondo problema era funzionale: superata una zona morta centrale molto corta, `Math.sign()` portava immediatamente l'asse da `0` a `-1` o `1`. Il pomello saltava quindi dal centro al lato e la nave passava da ferma a velocità massima senza valori intermedi.
+Test eseguito con WebKitGTK 2.52.5 a gioco attivo. Dopo una baseline di 150 frame sono stati generati eventi `pointermove` ogni 4 ms, alternando lato ogni 20 campioni; 302 eventi sono arrivati durante altri 150 frame.
 
-### 3. Correzione della pipeline input
+| Scenario | Frame misurati | Media | p95 | Massimo | Frame oltre 25 ms |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 145 | 16,062 ms | 17 ms | 17 ms | 0 |
+| Stress touch | 145 | 16,055 ms | 17 ms | 17 ms | 0 |
 
-- Ripristinato un asse analogico continuo con zona morta del 12%, rimappata in modo che l'uscita resti continua fino alla velocità massima.
-- La posizione del dito aggiorna subito il valore usato dal gioco; non attende il rendering dell'interfaccia.
-- La geometria del controllo viene letta una sola volta al `pointerdown` e riutilizzata per tutto il gesto.
-- Gli aggiornamenti visuali sono coalesciuti: al massimo un render DOM per `requestAnimationFrame`, sempre con l'ultimo campione disponibile.
-- Il pomello ora usa `transform: translate3d(...)` e `will-change: transform`; non viene più animata la proprietà `left`.
-- Gli attributi ARIA vengono riscritti soltanto quando cambia il valore annunciato.
-- Centralizzato il cleanup per `pointerup`, `pointercancel`, perdita della capture, blur, cambio pagina e pausa.
-- Un resize dovuto soltanto alla toolbar verticale del browser non interrompe più il gesto. Cambio orientamento o larghezza reale continuano invece a resettare l'input e la geometria.
+Nel runner disponibile lo stress touch non ha introdotto frame lunghi né una regressione misurabile rispetto alla baseline.
 
-### 4. Redesign del controllo
+## Verifica responsive
 
-- Allargata la corsa orizzontale per consentire regolazioni fini su telefoni stretti.
-- Sostituito l'aspetto da interruttore on/off con un flight control analogico: guida luminosa, zona neutra leggibile, impugnatura rettangolare e indicatore direzionale.
-- Ridotte le ombre del pomello per evitare clipping e paint inutilmente ampio vicino ai bordi.
-- Aggiunti focus visibile, controllo con frecce/Home/End, descrizione per screen reader e rispetto di `prefers-reduced-motion`.
-- Conservati Pointer Capture, ritorno automatico al centro e uso simultaneo di movimento e Fire con due dita.
+Misure effettuate in WebKitGTK con viewport telefoniche in portrait:
 
-### 5. Test di regressione
+| Viewport | Pomello | Fire | Spazio tra i controlli | Overflow orizzontale |
+| --- | ---: | ---: | ---: | ---: |
+| 341 px | 119,34 × 54 px | 68 × 54 px | 117,66 px | 0 px |
+| 360 px | 126 × 54 px | 68 × 54 px | 130 px | 0 px |
+| 390 px | 136,5 × 54 px | 68 × 54 px | 149,5 px | 0 px |
 
-La suite ora copre anche il wiring reale dei listener del joystick. Sullo stesso burst di 240 campioni verifica:
+Nel controllo aggiuntivo a 341 px con altezza utile di 503 px, i target scendono a 48 px come previsto dal breakpoint compatto, la card resta interamente visibile e l'overflow orizzontale resta a zero.
 
-- 1 sola lettura geometrica per gesto;
-- 0 scritture di stile dentro gli handler `pointermove`;
-- 1 solo aggiornamento visuale nel frame, usando l'ultimo campione;
-- deduplicazione delle scritture ARIA nei frame successivi;
-- pointer estranei ignorati;
-- reset idempotente su release, cancel e perdita capture;
-- nessuna posizione obsoleta se il gesto termina prima del frame pendente;
-- corretta sovrapposizione dei tasti direzionali accessibili.
-
-Risultati finali:
+## Verifiche finali
 
 - `npm run check`: superato;
 - `node --test --test-isolation=none test/game.test.js`: 28/28 test superati;
-- `npm test`: superato;
+- test browser WebKitGTK: superato;
 - `git diff --check`: superato.
 
-### 6. Verifica browser del layout
+## Limiti
 
-Controllo eseguito con WebKit 2.52.4 su viewport mobile. Il driver impone una larghezza minima effettiva di 341 px, quindi sono stati misurati 341, 360 e 390 px:
-
-| Viewport effettivo | Joystick | Fire | Spazio tra i controlli | Overflow orizzontale |
-| --- | ---: | ---: | ---: | ---: |
-| 341 px | 177,3 × 54 px | 68 × 54 px | 59,7 px | 0 px |
-| 360 px | 187,2 × 54 px | 68 × 54 px | 68,8 px | 0 px |
-| 390 px | 202,8 × 54 px | 68 × 54 px | 83,2 px | 0 px |
-
-Il calcolo CSS mantiene il layout entro la card anche a 320 px, con target verticali di almeno 48 px nel breakpoint più basso.
-
-## Limiti della verifica
-
-Il runner disponibile non emula in modo affidabile il timing `requestAnimationFrame` di una pagina visibile, quindi il test dimostra la riduzione strutturale del lavoro per gesto ma non costituisce una misura FPS su telefono. Il Canvas continua inoltre a usare `shadowBlur` per fino a 40 invasori: è un costo secondario indipendente dal joystick da profilare soltanto se resta stuttering senza interagire con il controllo.
-
-Checklist consigliata su dispositivo reale:
-
-- Chrome Android e Safari iOS;
-- schermi a 60 Hz e, se disponibile, 120 Hz;
-- trascinamento continuo sinistra/destra mentre si preme Fire con un secondo dito;
-- apertura/chiusura della toolbar del browser durante il gesto;
-- livello 3 con flotta completa, per distinguere costo input e costo Canvas;
-- rotazione, ritorno in portrait e ripresa dopo la pausa.
+Il test browser confronta il frame pacing reale del runner WebKit disponibile, ma non sostituisce una misura su telefono fisico con GPU, frequenza di refresh e gestione energetica proprie. La prova consigliata resta trascinamento sinistra/destra con Fire simultaneo su Chrome Android e Safari iOS, soprattutto al livello 3.
 
 ## Esito
 
-La causa specifica introdotta dal joystick è stata rimossa: il percorso touch non alterna più letture e scritture di layout per ogni campione, e il controllo non è più binario. Resta necessaria una prova su telefono fisico per confermare il frame pacing del dispositivo e decidere se intervenire separatamente sugli effetti Canvas.
+Il pomello arcade binario è stato ripristinato senza reintrodurre le letture e scritture di layout per ogni campione touch. La pipeline aggiorna il DOM soltanto quando cambia stato e, nel test disponibile, lo stress touch non modifica il frame pacing rispetto alla baseline.
