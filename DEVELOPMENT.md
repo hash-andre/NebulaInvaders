@@ -56,6 +56,7 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ### Bilanciamento finale, identità visiva, respawn e musica
 
+- Rafforzata la fanfara di completamento con salita melodica, basso ascendente e accordo finale maggiore sostenuto; la base si interrompe per lasciare spazio alla risoluzione senza alzare il volume globale.
 - Ridotta la flotta del livello 3 da 4×10 a 4×9 unità, come il livello 2, mantenendo un incremento moderato della velocità iniziale da 31 a 35.
 - Scambiati gli incontri conclusivi: il Void Sovereign è ora il miniboss con 10 HP e cortina ridotta a cinque colpi; il Rift Harbinger è il boss finale con 12 HP, teletrasporto e cadenza leggermente rallentati.
 - Conservata l'identità audio dei due avversari in base al loro tipo e non al ruolo temporaneo di boss/miniboss.

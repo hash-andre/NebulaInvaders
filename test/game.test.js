@@ -272,6 +272,38 @@ test("the audio engine routes music below effects and stops its sequencer when m
   }
 });
 
+test("campaign completion plays a rising fanfare with bass and a sustained final chord", () => {
+  const originalSetTimeout = global.setTimeout;
+  const scheduledDelays = [];
+  const tones = [];
+  const audio = new AudioEngine();
+  audio.tone = (...tone) => tones.push(tone);
+
+  try {
+    global.setTimeout = (callback, delay) => {
+      scheduledDelays.push(delay);
+      callback();
+      return delay;
+    };
+    audio.campaignWin();
+  } finally {
+    global.setTimeout = originalSetTimeout;
+  }
+
+  assert.deepEqual(scheduledDelays, [420, 540, 665, 805, 975, 420, 805, 1_200]);
+  assert.equal(tones.length, 14);
+  assert.deepEqual(tones.slice(-7).map(([frequency]) => frequency), [
+    261.63,
+    329.63,
+    392,
+    523.25,
+    659.25,
+    1_046.5,
+    1_318.51,
+  ]);
+  assert.ok(tones.slice(-7).every(([, duration]) => duration >= 0.72));
+});
+
 test("invaders use four curved drone silhouettes instead of one pixel sprite", () => {
   const calls = [];
   const context = new Proxy({}, {

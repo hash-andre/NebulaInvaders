@@ -250,12 +250,32 @@ class AudioEngine {
   }
 
   campaignWin() {
-    [523, 659, 784, 1_047, 1_319].forEach((frequency, index) => {
+    const startDelay = 420;
+    const melody = [
+      [392, 0, 0.14],
+      [523.25, 120, 0.16],
+      [659.25, 245, 0.18],
+      [783.99, 385, 0.22],
+      [1_046.5, 555, 0.34],
+    ];
+
+    melody.forEach(([frequency, delay, duration], index) => {
       setTimeout(() => {
-        this.tone(frequency, index === 4 ? 0.55 : 0.2, "triangle", 0.05);
-        if (index === 4) this.tone(659, 0.55, "sine", 0.035);
-      }, 420 + index * 125);
+        this.tone(frequency, duration, index < 2 ? "square" : "triangle", 0.048, frequency * 1.012);
+      }, startDelay + delay);
     });
+
+    [[130.81, 0], [196, 385]].forEach(([frequency, delay]) => {
+      setTimeout(() => this.tone(frequency, 0.34, "sawtooth", 0.034, frequency * 0.98), startDelay + delay);
+    });
+
+    setTimeout(() => {
+      [261.63, 329.63, 392, 523.25, 659.25].forEach((frequency, index) => {
+        this.tone(frequency, 0.95, index < 2 ? "sine" : "triangle", 0.038 - index * 0.003);
+      });
+      this.tone(1_046.5, 0.72, "sine", 0.025, 1_318.51);
+      this.tone(1_318.51, 0.72, "triangle", 0.02, 1_568);
+    }, startDelay + 780);
   }
 
   lose() {
