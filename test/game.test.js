@@ -3,7 +3,15 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
-const { LEVELS, Bullet, Explosion, BossExplosion, Game } = require("../script.js");
+const {
+  LEVELS,
+  AudioEngine,
+  Bullet,
+  Invader,
+  Explosion,
+  BossExplosion,
+  Game,
+} = require("../script.js");
 
 function createClassList() {
   const values = new Set();
@@ -62,10 +70,12 @@ function createAudio() {
     "bossShoot",
     "bossHit",
     "bossDefeat",
-    "preBossAppear",
-    "preBossShoot",
-    "preBossHit",
-    "preBossDefeat",
+    "harbingerAppear",
+    "harbingerShoot",
+    "harbingerHit",
+    "harbingerDefeat",
+    "startMusic",
+    "stopMusic",
   ].forEach((method) => {
     audio[method] = (levelIndex) => calls.push([method, levelIndex]);
   });
@@ -129,6 +139,17 @@ test("new campaign creates the first fleet and initializes the HUD", () => {
   assert.match(canvas.style.backgroundImage, /level-1-background\.webp/);
 });
 
+test("the final fleet matches level two's formation with a modest speed increase", () => {
+  const levelTwo = LEVELS[1];
+  const finalLevel = LEVELS[2];
+
+  assert.equal(finalLevel.rows, levelTwo.rows);
+  assert.equal(finalLevel.columns, levelTwo.columns);
+  assert.equal(finalLevel.rows * finalLevel.columns, 36);
+  assert.ok(finalLevel.fleetSpeed > levelTwo.fleetSpeed);
+  assert.ok(finalLevel.fleetSpeed - levelTwo.fleetSpeed <= 5);
+});
+
 test("bullets move according to elapsed time", () => {
   const bullet = new Bullet(10, 100, -350);
   bullet.update(0.2);
@@ -152,6 +173,123 @@ test("shooting and taking damage use distinct haptic feedback", () => {
   game.collisions();
   assert.deepEqual(vibrations, [12, [45, 35, 80]]);
   assert.ok(game.effects.some((effect) => effect instanceof Explosion));
+});
+
+test("respawn grants two seconds of blinking collision immunity", () => {
+  const { game } = createGame();
+  game.running = true;
+  game.enemyBullets = [
+    new Bullet(game.player.x, game.player.y, 0, true),
+    new Bullet(game.player.x, game.player.y, 0, true),
+  ];
+
+  game.collisions();
+  assert.equal(game.lives, 2, "simultaneous projectiles must cost only one life");
+  assert.equal(game.playerInvulnerability, 2);
+  assert.equal(game.enemyBullets.length, 0);
+
+  game.enemyBullets = [new Bullet(game.player.x, game.player.y, 0, true)];
+  game.collisions();
+  assert.equal(game.lives, 2, "overlapping shots are harmless during respawn immunity");
+  assert.equal(game.enemyBullets.length, 0, "shots touching the protected ship are consumed");
+  game.updatePlayer(1.99);
+  assert.equal(game.lives, 2);
+  game.updatePlayer(0.02);
+  game.enemyBullets = [new Bullet(game.player.x, game.player.y, 0, true)];
+  game.collisions();
+  assert.equal(game.lives, 1, "damage resumes after the full two-second window");
+
+  const script = fs.readFileSync(path.join(__dirname, "..", "script.js"), "utf8");
+  assert.match(script, /Math\.floor\(time \/ 90\) % 2/);
+});
+
+test("starting a mission enables a quiet synthesized music layer", () => {
+  const { game, audio } = createGame();
+  game.start();
+
+  assert.deepEqual(audio.calls.slice(0, 2), [["init", undefined], ["startMusic", 0]]);
+  const script = fs.readFileSync(path.join(__dirname, "..", "script.js"), "utf8");
+  assert.match(script, /this\.musicBus\.gain\.value = 0\.22/);
+  assert.match(script, /setInterval\(\(\) => this\.playMusicStep\(\), 240\)/);
+});
+
+test("the audio engine routes music below effects and stops its sequencer when muted", () => {
+  const originalWindow = global.window;
+  const originalSetInterval = global.setInterval;
+  const originalClearInterval = global.clearInterval;
+  const clearedTimers = [];
+
+  class FakeAudioNode {
+    constructor() {
+      this.gain = {
+        value: 0,
+        setValueAtTime() {},
+        exponentialRampToValueAtTime() {},
+      };
+      this.frequency = {
+        setValueAtTime() {},
+        exponentialRampToValueAtTime() {},
+      };
+    }
+
+    connect(target) { return target; }
+    start() {}
+    stop() {}
+  }
+
+  class FakeAudioContext {
+    constructor() {
+      this.currentTime = 0;
+      this.state = "running";
+      this.destination = new FakeAudioNode();
+    }
+
+    createGain() { return new FakeAudioNode(); }
+    createOscillator() { return new FakeAudioNode(); }
+    resume() {}
+  }
+
+  try {
+    global.window = { AudioContext: FakeAudioContext };
+    global.setInterval = (callback, delay) => ({ callback, delay });
+    global.clearInterval = (timer) => clearedTimers.push(timer);
+    const audio = new AudioEngine();
+
+    audio.startMusic(2);
+    assert.equal(audio.sfxBus.gain.value, 1);
+    assert.equal(audio.musicBus.gain.value, 0.22);
+    assert.equal(audio.musicTimer.delay, 240);
+    assert.equal(audio.musicLevel, 2);
+
+    const activeTimer = audio.musicTimer;
+    audio.setEnabled(false);
+    assert.equal(audio.musicTimer, null);
+    assert.deepEqual(clearedTimers, [activeTimer]);
+  } finally {
+    global.window = originalWindow;
+    global.setInterval = originalSetInterval;
+    global.clearInterval = originalClearInterval;
+  }
+});
+
+test("invaders use four curved drone silhouettes instead of one pixel sprite", () => {
+  const calls = [];
+  const context = new Proxy({}, {
+    get: (target, property) => {
+      if (!(property in target)) target[property] = (...args) => calls.push([property, ...args]);
+      return target[property];
+    },
+    set: (target, property, value) => {
+      target[property] = value;
+      return true;
+    },
+  });
+
+  for (let row = 0; row < 4; row += 1) new Invader(10, 20, row).draw(context, row % 2);
+
+  assert.ok(calls.some(([method]) => method === "quadraticCurveTo"));
+  assert.ok(calls.some(([method]) => method === "rotate"));
+  assert.ok(calls.filter(([method]) => method === "ellipse").length >= 4);
 });
 
 test("the mobile arcade knob provides binary movement and springs to center", () => {
@@ -433,7 +571,7 @@ test("clearing a fleet starts that level's boss phase", () => {
   assert.deepEqual(audio.calls.at(-1), ["bossAppear", 0]);
 });
 
-test("the final fleet unlocks a unique pre-boss before the Sovereign", () => {
+test("the final fleet unlocks the Sovereign before the Harbinger", () => {
   const { game, ui, audio } = createGame();
   game.levelIndex = LEVELS.length - 1;
   game.loadLevel();
@@ -442,52 +580,58 @@ test("the final fleet unlocks a unique pre-boss before the Sovereign", () => {
 
   game.update(0);
   assert.equal(game.phase, "pre-boss");
-  assert.equal(game.boss.kind, "harbinger");
-  assert.match(ui.status.textContent, /Rift Harbinger/);
-  assert.deepEqual(audio.calls.at(-1), ["preBossAppear", undefined]);
+  assert.equal(game.boss.kind, "sovereign");
+  assert.match(ui.status.textContent, /Void Sovereign/);
+  assert.deepEqual(audio.calls.at(-1), ["bossAppear", 2]);
 
   game.boss.health = 1;
   game.damageBoss();
   assert.equal(game.phase, "boss-transition");
   assert.equal(game.preBossDefeated, true);
-  assert.deepEqual(audio.calls.at(-1), ["preBossDefeat", undefined]);
+  assert.deepEqual(audio.calls.at(-1), ["bossDefeat", 2]);
+  assert.match(ui.status.textContent, /Harbinger incoming/);
 
   game.update(1.1);
   assert.equal(game.phase, "boss");
-  assert.equal(game.boss.kind, "sovereign");
+  assert.equal(game.boss.kind, "harbinger");
+  assert.deepEqual(audio.calls.at(-1), ["harbingerAppear", undefined]);
 });
 
-test("the pre-boss phase-shifts and alternates non-twin-core attacks", () => {
+test("the rebalanced Sovereign mini-boss rotates three reduced patterns", () => {
   const { game } = createGame();
   game.levelIndex = LEVELS.length - 1;
   game.loadLevel();
   game.spawnPreBoss();
-  game.boss.dashTimer = 0;
-  game.boss.fireTimer = 0;
 
-  game.updateBoss(0.1);
-  assert.equal(game.effects.length, 2, "phase shift should leave effects at departure and arrival");
-  assert.equal(game.enemyBullets.length, 5, "first Harbinger pattern is a five-way fan");
-
-  game.enemyBullets = [];
-  game.boss.fireTimer = 0;
-  game.updateBoss(0);
-  assert.equal(game.enemyBullets.length, 3, "second Harbinger pattern is converging crossfire");
-});
-
-test("the final boss cycles through aimed, crossfire, and curtain attacks", () => {
-  const { game } = createGame();
-  game.levelIndex = LEVELS.length - 1;
-  game.loadLevel();
-  game.spawnBoss();
-
-  [3, 3, 7].forEach((expectedCount) => {
+  [3, 3, 5].forEach((expectedCount) => {
     game.enemyBullets = [];
     game.boss.fireTimer = 0;
     game.updateBoss(0);
     assert.equal(game.enemyBullets.length, expectedCount);
   });
-  assert.equal(game.boss.attackIndex, 3);
+  assert.equal(game.boss.health, 10);
+  assert.ok(game.boss.fireDelay > 0.8);
+});
+
+test("the final Harbinger keeps phase shifts but fires at a moderated cadence", () => {
+  const { game } = createGame();
+  game.levelIndex = LEVELS.length - 1;
+  game.loadLevel();
+  game.spawnBoss();
+  game.boss.dashTimer = 0;
+  game.boss.fireTimer = 0;
+
+  game.updateBoss(0.1);
+  assert.equal(game.effects.length, 2, "phase shift should leave effects at departure and arrival");
+  assert.equal(game.enemyBullets.length, 5);
+  assert.equal(game.boss.health, 12);
+  assert.equal(game.boss.speed, 132);
+  assert.equal(game.boss.fireDelay, 0.98);
+
+  game.enemyBullets = [];
+  game.boss.fireTimer = 0;
+  game.updateBoss(0);
+  assert.equal(game.enemyBullets.length, 3);
 });
 
 test("defeating a boss preserves progress and unlocks the next level", () => {
@@ -544,7 +688,7 @@ test("boss projectiles are aimed at players hiding at either edge", () => {
 });
 
 test("every boss has a distinct silhouette and audio identity", () => {
-  assert.deepEqual(LEVELS.map((level) => level.boss.kind), ["sentinel", "twin-core", "sovereign"]);
+  assert.deepEqual(LEVELS.map((level) => level.boss.kind), ["sentinel", "twin-core", "harbinger"]);
 
   LEVELS.forEach((level, levelIndex) => {
     const { game, audio } = createGame();
@@ -556,7 +700,8 @@ test("every boss has a distinct silhouette and audio identity", () => {
     game.boss.health -= 1;
     game.damageBoss();
 
-    assert.deepEqual(audio.calls.at(-1), ["bossHit", levelIndex]);
+    const expectedSound = levelIndex === 2 ? ["harbingerHit", undefined] : ["bossHit", levelIndex];
+    assert.deepEqual(audio.calls.at(-1), expectedSound);
     assert.equal(dimensions[0] > 100, true);
   });
 });
