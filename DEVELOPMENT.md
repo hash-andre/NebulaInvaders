@@ -54,6 +54,18 @@ Il gioco usa `requestAnimationFrame` per il ciclo principale. Gli aggiornamenti 
 
 ## Modifiche effettuate
 
+### Bilanciamento finale, identità visiva, respawn e musica
+
+- Rafforzata la fanfara di completamento con salita melodica, basso ascendente e accordo finale maggiore sostenuto; la base si interrompe per lasciare spazio alla risoluzione senza alzare il volume globale.
+- Ridotta la flotta del livello 3 da 4×10 a 4×9 unità, come il livello 2, mantenendo un incremento moderato della velocità iniziale da 31 a 35.
+- Scambiati gli incontri conclusivi: il Void Sovereign è ora il miniboss con 10 HP e cortina ridotta a cinque colpi; il Rift Harbinger è il boss finale con 12 HP, teletrasporto e cadenza leggermente rallentati.
+- Conservata l'identità audio dei due avversari in base al loro tipo e non al ruolo temporaneo di boss/miniboss.
+- Aggiunti due secondi di invulnerabilità dopo un colpo non fatale; la navicella lampeggia e i proiettili a contatto vengono consumati senza sottrarre altre vite.
+- Sostituita la sagoma pixelata comune degli alieni con quattro droni Canvas originali: manta orbitale, scheggia alata, medusa energetica e nucleo cristallino.
+- Aggiunta una sequenza techno spaziale sintetizzata a 240 ms per step, con tre scale di livello e bus Web Audio dedicato al 22% del bus effetti; il toggle controlla musica ed effetti insieme.
+- Aggiornati test di regressione, README, cache busting degli asset e documento [`TECHNICAL_ASSESSMENT.md`](TECHNICAL_ASSESSMENT.md).
+- Verifica completata con `npm run check`, 33 test automatici, `git diff --check` e server HTTP locale: pagina, script versionato e fondale del livello 3 rispondono correttamente. La resa percettiva di musica e animazioni resta nella checklist manuale su browser/device reale.
+
 ### Stabilità input mobile e pomello arcade binario
 
 - Individuata nel vecchio `pointermove` una sequenza ripetuta di lettura layout e scrittura di `left`/ARIA che poteva contendere il main thread al Canvas.

@@ -39,32 +39,33 @@ const LEVELS = [
     name: "Nebula Throne",
     background: "assets/level-3-background.webp",
     rows: 4,
-    columns: 10,
-    fleetSpeed: 38,
+    columns: 9,
+    fleetSpeed: 35,
     drop: 20,
     enemyFireDelay: [0.62, 1.35],
     preBoss: {
-      kind: "harbinger",
-      name: "Rift Harbinger",
-      health: 9,
-      speed: 148,
-      fireDelay: 0.88,
-      score: 1_250,
-      color: "#ffb84d",
-    },
-    boss: {
       kind: "sovereign",
       name: "Void Sovereign",
-      health: 14,
-      speed: 112,
-      fireDelay: 0.64,
-      score: 2_000,
+      health: 10,
+      speed: 102,
+      fireDelay: 0.84,
+      score: 1_250,
       color: "#54e8ff",
+    },
+    boss: {
+      kind: "harbinger",
+      name: "Rift Harbinger",
+      health: 12,
+      speed: 132,
+      fireDelay: 0.98,
+      score: 2_000,
+      color: "#ffb84d",
     },
   },
 ];
 
 const INVADER_COLORS = ["#ff70d2", "#a77aff", "#54e8ff", "#ffd95a"];
+const RESPAWN_INVULNERABILITY = 2;
 const JOYSTICK_DEAD_ZONE = 0.2;
 const JOYSTICK_TRAVEL_RATIO = 0.32;
 
@@ -73,12 +74,23 @@ class AudioEngine {
     this.ctx = null;
     this.enabled = true;
     this.step = 0;
+    this.sfxBus = null;
+    this.musicBus = null;
+    this.musicTimer = null;
+    this.musicStep = 0;
+    this.musicLevel = 0;
   }
 
   init() {
     if (!this.ctx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioContext();
+      this.sfxBus = this.ctx.createGain();
+      this.musicBus = this.ctx.createGain();
+      this.sfxBus.gain.value = 1;
+      this.musicBus.gain.value = 0.22;
+      this.sfxBus.connect(this.ctx.destination);
+      this.musicBus.connect(this.ctx.destination);
     }
 
     if (this.ctx.state === "suspended") {
@@ -99,9 +111,63 @@ class AudioEngine {
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), now + duration);
     gain.gain.setValueAtTime(volume, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    oscillator.connect(gain).connect(this.ctx.destination);
+    oscillator.connect(gain).connect(this.sfxBus);
     oscillator.start(now);
     oscillator.stop(now + duration);
+  }
+
+  musicTone(frequency, duration, type, volume, endFrequency = frequency) {
+    if (!this.enabled || !this.musicBus) return;
+
+    const now = this.ctx.currentTime;
+    const oscillator = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), now + duration);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(gain).connect(this.musicBus);
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+  }
+
+  playMusicStep() {
+    const roots = [55, 65.41, 73.42];
+    const sequences = [
+      [0, 7, 12, 7, 3, 10, 12, 15],
+      [0, 12, 7, 15, 3, 12, 10, 7],
+      [0, 3, 10, 15, 12, 7, 17, 10],
+    ];
+    const root = roots[this.musicLevel] || roots[0];
+    const sequence = sequences[this.musicLevel] || sequences[0];
+    const note = root * Math.pow(2, sequence[this.musicStep % sequence.length] / 12);
+
+    this.musicTone(note * 2, 0.16, "triangle", 0.032, note * 1.96);
+    if (this.musicStep % 2 === 0) this.musicTone(root, 0.2, "sine", 0.045, root * 0.72);
+    if (this.musicStep % 4 === 2) this.musicTone(1_400, 0.035, "square", 0.008, 520);
+    this.musicStep += 1;
+  }
+
+  startMusic(levelIndex = this.musicLevel) {
+    this.musicLevel = levelIndex;
+    if (!this.enabled) return;
+    this.init();
+    if (this.musicTimer) return;
+    this.musicStep = 0;
+    this.playMusicStep();
+    this.musicTimer = setInterval(() => this.playMusicStep(), 240);
+  }
+
+  stopMusic() {
+    if (!this.musicTimer) return;
+    clearInterval(this.musicTimer);
+    this.musicTimer = null;
+  }
+
+  setEnabled(enabled) {
+    this.enabled = enabled;
+    if (!enabled) this.stopMusic();
   }
 
   shoot() { this.tone(780, 0.1, "square", 0.035, 180); }
@@ -156,22 +222,22 @@ class AudioEngine {
     });
   }
 
-  preBossAppear() {
+  harbingerAppear() {
     [[196, 0], [294, 90], [147, 190], [392, 285]].forEach(([frequency, delay], index) => {
       setTimeout(() => this.tone(frequency, 0.2, index % 2 ? "square" : "triangle", 0.045, frequency * 0.55), delay);
     });
   }
 
-  preBossShoot() {
+  harbingerShoot() {
     this.tone(410, 0.12, "triangle", 0.035, 120);
     this.tone(205, 0.18, "sawtooth", 0.025, 70);
   }
 
-  preBossHit() {
+  harbingerHit() {
     this.tone(240, 0.1, "square", 0.038, 90);
   }
 
-  preBossDefeat() {
+  harbingerDefeat() {
     [392, 294, 196, 98].forEach((frequency, index) => {
       setTimeout(() => this.tone(frequency, 0.26, "triangle", 0.05, 45), index * 90);
     });
@@ -184,12 +250,32 @@ class AudioEngine {
   }
 
   campaignWin() {
-    [523, 659, 784, 1_047, 1_319].forEach((frequency, index) => {
+    const startDelay = 420;
+    const melody = [
+      [392, 0, 0.14],
+      [523.25, 120, 0.16],
+      [659.25, 245, 0.18],
+      [783.99, 385, 0.22],
+      [1_046.5, 555, 0.34],
+    ];
+
+    melody.forEach(([frequency, delay, duration], index) => {
       setTimeout(() => {
-        this.tone(frequency, index === 4 ? 0.55 : 0.2, "triangle", 0.05);
-        if (index === 4) this.tone(659, 0.55, "sine", 0.035);
-      }, 420 + index * 125);
+        this.tone(frequency, duration, index < 2 ? "square" : "triangle", 0.048, frequency * 1.012);
+      }, startDelay + delay);
     });
+
+    [[130.81, 0], [196, 385]].forEach(([frequency, delay]) => {
+      setTimeout(() => this.tone(frequency, 0.34, "sawtooth", 0.034, frequency * 0.98), startDelay + delay);
+    });
+
+    setTimeout(() => {
+      [261.63, 329.63, 392, 523.25, 659.25].forEach((frequency, index) => {
+        this.tone(frequency, 0.95, index < 2 ? "sine" : "triangle", 0.038 - index * 0.003);
+      });
+      this.tone(1_046.5, 0.72, "sine", 0.025, 1_318.51);
+      this.tone(1_318.51, 0.72, "triangle", 0.02, 1_568);
+    }, startDelay + 780);
   }
 
   lose() {
@@ -232,7 +318,9 @@ class Player {
     Object.assign(this, { x, y, width: 46, height: 25, speed: 5.5 });
   }
 
-  draw(context) {
+  draw(context, invulnerable = false, time = 0) {
+    if (invulnerable && Math.floor(time / 90) % 2 === 1) return;
+
     context.save();
     context.translate(this.x, this.y);
     context.shadowBlur = 16;
@@ -263,26 +351,73 @@ class Invader {
 
   draw(context, frame) {
     const color = INVADER_COLORS[this.row % INVADER_COLORS.length];
+    const variant = this.row % 4;
+    const pulse = frame ? 1 : -1;
 
     context.save();
-    context.translate(this.x, this.y);
+    context.translate(this.x + 17, this.y + 12 + pulse * 0.6);
     context.shadowBlur = 9;
     context.shadowColor = color;
     context.fillStyle = color;
-    context.fillRect(8, 3, 18, 4);
-    context.fillRect(4, 7, 26, 12);
-    context.fillRect(0, 11, 34, 6);
-    context.fillRect(7, 19, 6, 5);
-    context.fillRect(21, 19, 6, 5);
-    context.fillStyle = "#101126";
-    context.fillRect(8, 10, 5, 5);
-    context.fillRect(21, 10, 5, 5);
 
-    if (frame) {
-      context.fillStyle = color;
-      context.fillRect(1, 20, 5, 4);
-      context.fillRect(28, 20, 5, 4);
+    if (variant === 0) {
+      context.beginPath();
+      context.moveTo(-17, 3);
+      context.quadraticCurveTo(-7, -11, 0, -7);
+      context.quadraticCurveTo(7, -11, 17, 3);
+      context.quadraticCurveTo(8, 1, 6, 9);
+      context.lineTo(0, 5 + pulse);
+      context.lineTo(-6, 9);
+      context.quadraticCurveTo(-8, 1, -17, 3);
+      context.fill();
+    } else if (variant === 1) {
+      context.beginPath();
+      context.moveTo(0, -11);
+      context.lineTo(6, -3);
+      context.lineTo(17, -7);
+      context.lineTo(11, 3);
+      context.lineTo(15, 10);
+      context.lineTo(3, 6);
+      context.lineTo(0, 11 + pulse);
+      context.lineTo(-3, 6);
+      context.lineTo(-15, 10);
+      context.lineTo(-11, 3);
+      context.lineTo(-17, -7);
+      context.lineTo(-6, -3);
+      context.closePath();
+      context.fill();
+    } else if (variant === 2) {
+      context.beginPath();
+      context.arc(0, -2, 11, Math.PI, 0);
+      context.quadraticCurveTo(14, 7, 8, 8);
+      context.quadraticCurveTo(4, 4 + pulse, 2, 11);
+      context.quadraticCurveTo(-1, 5, -4, 10 + pulse);
+      context.quadraticCurveTo(-7, 4, -10, 8);
+      context.quadraticCurveTo(-14, 7, -11, -2);
+      context.fill();
+    } else {
+      context.rotate(frame ? 0.08 : -0.08);
+      context.beginPath();
+      context.moveTo(0, -11);
+      context.lineTo(7, -5);
+      context.lineTo(16, 0);
+      context.lineTo(8, 5);
+      context.lineTo(0, 11);
+      context.lineTo(-8, 5);
+      context.lineTo(-16, 0);
+      context.lineTo(-7, -5);
+      context.closePath();
+      context.fill();
     }
+
+    context.fillStyle = "#0b1024";
+    context.beginPath();
+    context.ellipse(0, 0, variant === 2 ? 5 : 4, variant === 1 ? 6 : 4, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "#f4ffff";
+    context.beginPath();
+    context.arc(pulse * 0.8, -0.5, 1.8, 0, Math.PI * 2);
+    context.fill();
 
     context.restore();
   }
@@ -703,6 +838,7 @@ class Game {
     this.effects = [];
     this.invaders = [];
     this.boss = null;
+    this.playerInvulnerability = 0;
     this.preBossDefeated = false;
     this.bossTransitionTimer = 0;
     this.phase = "fleet";
@@ -982,6 +1118,7 @@ class Game {
     this.audio.init();
 
     if (this.paused) {
+      this.audio.startMusic?.(this.levelIndex);
       this.paused = false;
       this.ui.panel.classList.add("hidden");
       this.ui.status.textContent = "Mission active";
@@ -998,6 +1135,7 @@ class Game {
       this.loadLevel();
     }
 
+    this.audio.startMusic?.(this.levelIndex);
     this.running = true;
     this.paused = false;
     this.ui.panel.classList.add("hidden");
@@ -1072,6 +1210,7 @@ class Game {
 
   updatePlayer(deltaTime) {
     this.shootCooldown -= deltaTime;
+    this.playerInvulnerability = Math.max(0, this.playerInvulnerability - deltaTime);
     const keyboardMovement = (this.keys.ArrowRight ? 1 : 0) - (this.keys.ArrowLeft ? 1 : 0);
     const movement = Math.max(-1, Math.min(1, keyboardMovement + this.touchAxis));
     const nextX = this.player.x + movement * this.player.speed * 60 * deltaTime;
@@ -1159,6 +1298,7 @@ class Game {
     const boss = this.boss;
     const speed = 195 + this.levelIndex * 25;
     const originY = boss.y + boss.height;
+    const preBoss = this.phase === "pre-boss";
 
     if (boss.kind === "harbinger") {
       if (boss.attackIndex % 2 === 0) {
@@ -1170,7 +1310,7 @@ class Game {
           this.enemyBullets.push(this.createAimedBullet(boss.x + offset, originY, speed + 30, [120, 0, -120][index]));
         });
       }
-      this.audio.preBossShoot();
+      this.audio.harbingerShoot();
       boss.fireTimer = boss.fireDelay * (boss.attackIndex % 2 === 0 ? 1.1 : 0.8);
     } else if (boss.kind === "sovereign") {
       const pattern = boss.attackIndex % 3;
@@ -1183,8 +1323,9 @@ class Game {
           this.enemyBullets.push(this.createAimedBullet(boss.x + offset, originY, speed + 10, [140, 0, -140][index]));
         });
       } else {
-        for (let index = 0; index < 7; index += 1) {
-          const offset = 12 + index * (boss.width - 24) / 6;
+        const projectileCount = preBoss ? 5 : 7;
+        for (let index = 0; index < projectileCount; index += 1) {
+          const offset = 12 + index * (boss.width - 24) / (projectileCount - 1);
           const horizontalBias = (index % 2 ? 1 : -1) * (55 + index * 5);
           this.enemyBullets.push(new Bullet(boss.x + offset, originY, speed + 40, true, horizontalBias));
         }
@@ -1240,7 +1381,8 @@ class Game {
     this.bullets = [];
     this.boss = new Boss(LEVELS[this.levelIndex].boss, this.canvas.width);
     this.ui.status.textContent = `BOSS · ${this.boss.name} · ${this.boss.health} HP`;
-    this.audio.bossAppear(this.levelIndex);
+    if (this.boss.kind === "harbinger") this.audio.harbingerAppear();
+    else this.audio.bossAppear(this.levelIndex);
   }
 
   spawnPreBoss() {
@@ -1250,7 +1392,8 @@ class Game {
     this.enemyBullets = [];
     this.boss = new Boss(LEVELS[this.levelIndex].preBoss, this.canvas.width);
     this.ui.status.textContent = `PRE-BOSS · ${this.boss.name} · ${this.boss.health} HP`;
-    this.audio.preBossAppear();
+    if (this.boss.kind === "harbinger") this.audio.harbingerAppear();
+    else this.audio.bossAppear(this.levelIndex);
   }
 
   collisions() {
@@ -1303,6 +1446,7 @@ class Game {
 
     this.enemyBullets = this.enemyBullets.filter((bullet) => {
       if (!this.hit(bullet, this.player)) return true;
+      if (this.playerInvulnerability > 0) return false;
 
       this.effects.push(new Explosion(
         this.player.x + this.player.width / 2,
@@ -1317,6 +1461,7 @@ class Game {
       this.updateHud();
       this.player.x = this.canvas.width / 2 - 23;
       if (this.lives <= 0) this.finish(false);
+      else this.playerInvulnerability = RESPAWN_INVULNERABILITY;
       return false;
     });
   }
@@ -1333,7 +1478,7 @@ class Game {
         this.random,
       ));
       const preBoss = this.phase === "pre-boss";
-      if (preBoss) this.audio.preBossDefeat();
+      if (defeatedBoss.kind === "harbinger") this.audio.harbingerDefeat();
       else this.audio.bossDefeat(this.levelIndex);
       this.score += this.boss.score;
       this.boss = null;
@@ -1344,14 +1489,14 @@ class Game {
         this.bossTransitionTimer = 1.05;
         this.bullets = [];
         this.enemyBullets = [];
-        this.ui.status.textContent = "Rift collapsing · Sovereign incoming";
+        this.ui.status.textContent = "Void breached · Harbinger incoming";
       } else {
         this.completeLevel();
       }
       return;
     }
 
-    if (this.phase === "pre-boss") this.audio.preBossHit();
+    if (this.boss.kind === "harbinger") this.audio.harbingerHit();
     else this.audio.bossHit(this.levelIndex);
     const label = this.phase === "pre-boss" ? "PRE-BOSS" : "BOSS";
     this.ui.status.textContent = `${label} · ${this.boss.name} · ${this.boss.health} HP`;
@@ -1406,6 +1551,7 @@ class Game {
     this.ui.panel.classList.remove("hidden");
     if (win) this.audio.campaignWin();
     else this.audio.lose();
+    this.audio.stopMusic?.();
   }
 
   draw() {
@@ -1417,12 +1563,13 @@ class Game {
     gradient.addColorStop(1, "rgba(2,3,12,.55)");
     context.fillStyle = gradient;
     context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    this.player.draw(context);
+    const renderTime = performance.now();
+    this.player.draw(context, this.playerInvulnerability > 0, renderTime);
 
-    const animationFrame = Math.floor(performance.now() / 300) % 2;
+    const animationFrame = Math.floor(renderTime / 300) % 2;
     this.invaders.forEach((invader) => invader.draw(context, animationFrame));
     this.effects.forEach((effect) => effect.draw(context));
-    this.boss?.draw(context, performance.now());
+    this.boss?.draw(context, renderTime);
     this.bullets.forEach((bullet) => bullet.draw(context));
     this.enemyBullets.forEach((bullet) => bullet.draw(context));
     if (this.ufo) this.drawUfo(context);
@@ -1433,7 +1580,7 @@ class Game {
     const width = 210;
     const healthRatio = this.boss.health / this.boss.maxHealth;
     const x = (this.canvas.width - width) / 2;
-    const label = this.phase === "pre-boss" ? "RIFT GUARDIAN" : "LEVEL BOSS";
+    const label = this.phase === "pre-boss" ? "SECTOR GUARDIAN" : "LEVEL BOSS";
 
     context.save();
     context.font = '700 10px "Space Mono", monospace';
@@ -1483,10 +1630,11 @@ function bootstrap() {
   game.loop();
 
   document.querySelector("#sound-toggle").addEventListener("click", function toggleSound() {
-    game.audio.enabled = !game.audio.enabled;
+    game.audio.setEnabled(!game.audio.enabled);
     this.setAttribute("aria-pressed", String(game.audio.enabled));
-    this.setAttribute("aria-label", game.audio.enabled ? "Disable sound" : "Enable sound");
-    this.innerHTML = game.audio.enabled ? "♪ <span>Sound on</span>" : "× <span>Sound off</span>";
+    this.setAttribute("aria-label", game.audio.enabled ? "Disable audio" : "Enable audio");
+    this.innerHTML = game.audio.enabled ? "♪ <span>Audio on</span>" : "× <span>Audio off</span>";
+    if (game.audio.enabled && game.running) game.audio.startMusic(game.levelIndex);
   });
 
 }

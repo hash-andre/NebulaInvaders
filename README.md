@@ -1,6 +1,6 @@
 # Nebula Invaders
 
-Nebula Invaders is a dependency-free browser arcade game inspired by *Space Invaders*. It includes a three-level campaign, a different boss and background for each sector, keyboard and touch controls, synthesized audio, and a responsive interface.
+Nebula Invaders is a dependency-free fixed-screen space arcade game. It includes a three-level campaign, a different boss and background for each sector, keyboard and touch controls, synthesized audio, and a responsive interface.
 
 ## Play
 
@@ -24,7 +24,7 @@ Score and remaining lives carry over between levels. Completing the campaign awa
 | --- | --- | --- | --- |
 | 1 | Outer Patrol | Orbital Sentinel | Ring-shaped guardian with a descending laser cue |
 | 2 | Meteor Foundry | Twin Core | Dual-reactor silhouette, twin projectiles, and layered audio |
-| 3 | Nebula Throne | Rift Harbinger → Void Sovereign | Phase-shifting guardian followed by a multi-pattern final boss |
+| 3 | Nebula Throne | Void Sovereign → Rift Harbinger | Moderated multi-pattern guardian followed by a phase-shifting final boss |
 
 Every level uses its own generated, preloaded WebP space background. The backgrounds keep the center of the playfield dark enough for bullets, enemies, and the player ship to remain readable.
 
@@ -32,15 +32,17 @@ Every level uses its own generated, preloaded WebP space background. The backgro
 
 - Three-level campaign with persistent score and lives.
 - Three visually distinct bosses with custom entrance, firing, hit, and destruction sounds.
-- A dedicated phase-shifting pre-boss before the final encounter.
-- Three alternating attack patterns and vertical pursuit movement for the Void Sovereign.
-- Animated invader fleets with progressively harder formations.
+- A rebalanced Void Sovereign mini-boss before the final Rift Harbinger encounter.
+- A phase-shifting final boss with moderated movement and firing cadence.
+- Four original, curved Canvas drone silhouettes in place of classic pixel invaders.
+- Animated invader fleets with progressively faster formations and a 4×9 final fleet.
 - Enemy projectiles, collision handling, and increasing fleet speed.
+- Two seconds of blinking respawn invulnerability after a non-fatal hit.
 - Haptic feedback for firing and player damage on compatible mobile devices.
 - Particle explosions and dedicated audio feedback when invaders are destroyed.
 - Golden UFO bonus encounters.
 - Victory bonus based on remaining lives.
-- Web Audio sound effects with an audio toggle.
+- Low-volume synthesized space-techno music and louder Web Audio effects on separate gain buses.
 - A focused dark arcade interface.
 - Responsive canvas and HUD for small phones, tablets, desktops, and large displays.
 - Automatic pause and portrait-orientation warning on mobile landscape rotation.
@@ -83,6 +85,7 @@ The tests use Node's built-in test runner, so `npm install` is not required.
 │   └── game.test.js
 ├── DEVELOPMENT.md
 ├── MOBILE_INPUT_LOG.md
+├── TECHNICAL_ASSESSMENT.md
 ├── index.html
 ├── package.json
 ├── README.md
@@ -96,13 +99,13 @@ The tests use Node's built-in test runner, so `npm install` is not required.
 - CSS3 for responsive layout, safe areas, and touch feedback.
 - JavaScript for campaign state, entities, input, collision detection, and the game loop.
 - Canvas 2D for rendering gameplay.
-- Web Audio API for generated sound effects.
+- Web Audio API for generated sound effects and background music.
 - Google Fonts for Chakra Petch and Space Mono.
 - OpenAI Image Generation for the three campaign backgrounds.
 
 ## Browser support
 
-Use a current browser with Canvas, Web Audio, Pointer Events, and modern JavaScript support. Audio starts after the first user interaction, as required by browser autoplay policies.
+Use a current browser with Canvas, Web Audio, Pointer Events, and modern JavaScript support. Music and effects start after the first user interaction, as required by browser autoplay policies.
 
 ## GitHub Pages
 
